@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1C1A5E"
+      "backgroundColor": "#fff"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#fff"
       },
       "package": "com.irpharmacy"
     },

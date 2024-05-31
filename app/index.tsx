@@ -7,6 +7,7 @@ import { _retrieveData } from "../local_storage";
 import NetInfo from '@react-native-community/netinfo';
 import NoInternetModal from '../components/NoInternet';
 import { useNetworkStatus } from '../components/Network';
+import { responsiveFontSize } from "react-native-responsive-dimensions";
 const index = () => {
   const [verification, setVerification] = useState(true)
   const isConnected = useNetworkStatus();
@@ -27,7 +28,11 @@ const index = () => {
 
 
       } else {
-        setVerification(true);
+        setTimeout(() => {
+          // write your functions    
+          router.replace('/login')
+        }, 3000);
+        
       }
 
     });
@@ -38,22 +43,8 @@ const index = () => {
   return (
     <View style={styles.container}>
       <Image source={require('../assets/images/logo.png')} style={{ height: ts * 50, width: ts * 50, alignSelf: 'center' }} />
-      <Text style={styles.title}>irpharmacy</Text>
-      <Text style={styles.subtitle}>Community Learning App</Text>
-
-      {verification && <Link asChild href={"/login"}>
-        <Pressable style={styles.button} android_ripple={styles.ripple}>
-          <Text style={[styles.subtitle, { color: Colors.backgroundcolor }]}>
-            Start irpharmacy{" "}
-
-          </Text>
-          <FontAwesome
-            name="arrow-right"
-            size={20}
-            color={Colors.backgroundcolor}
-          />
-        </Pressable>
-      </Link>}
+      
+      <Text style={styles.subtitle}>Affordable Health Care</Text>
 
       <NoInternetModal visible={!isConnected} />
     </View>
@@ -71,14 +62,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 25,
+    fontSize: responsiveFontSize(3),
     fontWeight: "bold",
     color: Colors.primary
   },
   subtitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: '#fff'
+    color: '#555'
   },
   button: {
     position: "absolute",

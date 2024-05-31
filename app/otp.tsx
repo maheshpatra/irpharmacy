@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View, StatusBar, Alert, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, Text, View, StatusBar, Alert, ActivityIndicator,Image, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import { OtpInput } from "react-native-otp-entry";
 import instance from '../helper';
@@ -9,6 +9,7 @@ import { AntDesign } from "@expo/vector-icons";
 
 import { _storeData, _retrieveData } from '../local_storage';
 import { path } from "../components/server";
+import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsive-dimensions";
 // import { StatusBar } from "expo-status-bar";
 
 const otp = () => {
@@ -65,34 +66,66 @@ const otp = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle={'light-content'} />
+      <Image resizeMode="contain" source={require('../assets/images/otpicon.png')} style={{ height: responsiveScreenWidth(30), width: 100, position:'absolute',top:'10%',right:'5%' }} />
       <Text style={styles.subtitle}>Confirmation Code</Text>
+      <Text style={[styles.text,]}>
+       A 4 digit code has been sent to:{'\n'}
+        {mobile}
+      </Text>
+      <Text onPress={() => router.back()} style={[styles.text1,{width:responsiveScreenWidth(16),marginBottom:20,
+    borderBottomWidth:1,
+    borderColor:'#555'}]}>Change</Text>
       <OtpInput
         theme={{
           pinCodeTextStyle: styles.pinCodeText,
+          pinCodeContainerStyle: styles.pinCodeContainer
         }}
-        numberOfDigits={6}
-        focusColor="white"
+        numberOfDigits={4}
+        focusColor={Colors.primary}
+        
         focusStickBlinkingDuration={500}
         onTextChange={(text) => console.log(text)}
         onFilled={(text) => console.log(`OTP is ${text}`)}
       />
-      <Text style={[styles.text, { marginTop: 20 }]}>
-        We have sent an sms with an activation code to your phone number. +91
-        {mobile}
-      </Text>
+      
+      <TouchableOpacity
+            style={{
+              height: 50,
+              backgroundColor: Colors.primary,
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 10,
+              borderRadius: 12,
+            }}
+            // disabled={!mobile && mobile?.length != 10}
+            onPress={() => {
+              router.push("/tabs")
+             
+            }}
+          >
+            {/* {loading ? (
+              <ActivityIndicator />
+            ) : ( */}
+            <Text
+              style={{ fontWeight: "bold", fontSize: responsiveFontSize(2.4), color: Colors.backgroundcolor }}
+            >
+              Verify
+            </Text>
+            {/* )} */}
+          </TouchableOpacity>
 
-      <View style={{ marginTop: 20, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', width: '100%' }}>
-        <Text onPress={() => Alert.alert('Resend Code !', 'Are you sure you want to resend OTP')} style={styles.text1}>Didn't receive the code?</Text>
-        <Text onPress={() => router.back()} style={styles.text1}>Change Mobile No</Text>
+      <View style={{ marginTop: 20, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', width: '100%',marginLeft:10 }}>
+        <Text onPress={() => Alert.alert('Resend Code !', 'Are you sure you want to resend OTP')} style={[styles.text1,{color:Colors.primary}]}>Resend OTP</Text>
+        
       </View>
 
       {/* <Link asChild href={"/signup"}> */}
-      {loading?<Pressable style={styles.button} android_ripple={styles.ripple} >
+      {/* {loading?<Pressable style={styles.button} android_ripple={styles.ripple} >
         <ActivityIndicator size={'small'} color={Colors.primary} />
       </Pressable>:
       <Pressable style={styles.button} android_ripple={styles.ripple} onPress={login}>
         <AntDesign name="doubleright" size={30} color={Colors.primary} />
-      </Pressable>}
+      </Pressable>} */}
       {/* </Link> */}
     </View>
   );
@@ -104,11 +137,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     columnGap: 10,
     rowGap: 10,
     padding: 20,
-    backgroundColor: Colors.backgroundcolor,
+    backgroundColor:'#fff',
   },
   title: {
     fontSize: 24,
@@ -117,17 +149,16 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 22,
     fontWeight: "bold",
-    marginVertical: 20,
-    color: '#fff'
+    color: '#555'
   },
   text: {
     fontSize: 16,
-    color: 'white',
+    color: '#555',
   },
   text1: {
     fontSize: 17,
     fontWeight: '600',
-    color: 'white',
+    color: '#555',
   },
   input: {
     borderWidth: 0.5,
@@ -150,6 +181,11 @@ const styles = StyleSheet.create({
     bottom: 20,
   },
   pinCodeText: {
-    color: '#fff'
+    color: '#555'
+  }
+  ,pinCodeContainer:{
+    width:responsiveScreenWidth(18),
+    height:responsiveScreenWidth(18),
+    borderColor:'#555'
   }
 });
