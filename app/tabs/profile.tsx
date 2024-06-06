@@ -1,10 +1,13 @@
-import { View, Text } from 'react-native'
+import { View, Text, FlatList } from 'react-native'
 import React from 'react'
+import Header from '../../components/Header'
 
 export default function profile() {
   return (
-    <View>
-      <Text>profile</Text>
+    <View style={{flex:1,backgroundColor:'#fff'}}>
+      <Header title={'Profile'} />
+     
+      
     </View>
   )
 }

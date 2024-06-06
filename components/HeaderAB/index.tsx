@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Alert,NativeModules,Image } from 'react-n
 import Colors from '../../constants/Colors'
 import {Entypo,Ionicons,AntDesign} from '@expo/vector-icons';
 import { router, useRouter } from 'expo-router';
+import { responsiveScreenFontSize } from 'react-native-responsive-dimensions';
 const HeaderAB = ({ title,notification }) => {
     const {StatusBarManager} = NativeModules;
     const router = useRouter() 
@@ -10,9 +11,9 @@ const HeaderAB = ({ title,notification }) => {
     return (
         <View style={{ height: 59, width: '100%', backgroundColor: Colors.backgroundcolor, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15,marginTop:height }}>
             <TouchableOpacity onPress={()=>router.back()}>
-                <AntDesign name="arrowleft" color={'#fff'} size={24} />
+                <AntDesign name="arrowleft" color={'#000'} size={24} />
             </TouchableOpacity>
-            <Text style={{color:'#fff',fontWeight:'bold',fontSize:19,letterSpacing:.5}}>{title}</Text>
+            <Text style={{color:'#000',fontWeight:'bold',fontSize:responsiveScreenFontSize(2),letterSpacing:.5}}>{title}</Text>
            { notification ? <View>
             <Image  source={require('../../assets/images/logo.png')} style={{height:30,width:30,alignSelf:'center'}} />
                 </View>:<View style={{width:30}} />}

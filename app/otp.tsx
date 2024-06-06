@@ -95,7 +95,7 @@ const otp = () => {
               alignItems: "center",
               justifyContent: "center",
               marginTop: 10,
-              borderRadius: 12,
+              borderRadius: 8,
             }}
             // disabled={!mobile && mobile?.length != 10}
             onPress={() => {
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: Colors.light.text,
     padding: 10,
-    borderRadius: 10,
+    borderRadius: 4,
     width: "90%",
   },
   logo: {
