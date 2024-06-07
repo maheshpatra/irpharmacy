@@ -1,5 +1,5 @@
 import { StatusBar, } from 'expo-status-bar';
-import { View, Text,Modal, StyleSheet, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { ImageSlider } from "react-native-image-slider-banner";
 import { useEffect, useState } from 'react';
@@ -12,7 +12,6 @@ const Home = () => {
   const [tabdata, settabdata] = useState([])
   const [autoplay, setautoplay] = useState(false)
   const [bgimage, setbgimage] = useState(null)
-  const [modalVisible, setModalVisible] = useState(false);
   useEffect(() => {
 
     getbanner()
@@ -100,19 +99,7 @@ const Home = () => {
 
         </View>
       </ScrollView>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => {
-          Alert.alert('Modal has been closed.');
-          setModalVisible(!modalVisible);
-        }}>
-        <View style={{flex:1,backgroundColor:'#000',opacity:.5}}>
-         
-        
-        </View>
-      </Modal>
+      
 
     </View>
   );

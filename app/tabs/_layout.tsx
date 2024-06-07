@@ -17,7 +17,8 @@ export default function TabLayout() {
         paddingTop:8
       },
       tabBarLabelStyle:{
-        fontSize:responsiveScreenFontSize(1.6)
+        fontSize:responsiveScreenFontSize(1.6),
+        fontFamily:'novaregular'
       }
     
     }}>
