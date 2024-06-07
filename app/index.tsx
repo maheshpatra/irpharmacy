@@ -7,13 +7,12 @@ import { _retrieveData } from "../local_storage";
 import NetInfo from '@react-native-community/netinfo';
 import NoInternetModal from '../components/NoInternet';
 import { useNetworkStatus } from '../components/Network';
+import  useFonts  from "../hooks/useFonts";
 import { responsiveFontSize } from "react-native-responsive-dimensions";
 const index = () => {
   const [verification, setVerification] = useState(true)
   const isConnected = useNetworkStatus();
-  const gotopage = () => {
-
-  }
+  
 
   useEffect(() => {
 
@@ -67,8 +66,8 @@ const styles = StyleSheet.create({
     color: Colors.primary
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: responsiveFontSize(2.5),
+    fontFamily:'novabold',
     color: '#555'
   },
   button: {

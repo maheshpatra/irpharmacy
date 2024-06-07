@@ -20,7 +20,6 @@ export default function Orders() {
               <View style={{backgroundColor:'#e3f6da',width:responsiveScreenWidth(42),justifyContent:'center',alignItems:'center',height:responsiveScreenWidth(6),borderRadius:10}}>
               <Text style={{}}>{'Out for Delivery'}</Text>
               </View>
-              
               </View>
             </View>
           }

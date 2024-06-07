@@ -74,7 +74,7 @@ const otp = () => {
       </Text>
       <Text onPress={() => router.back()} style={[styles.text1,{width:responsiveScreenWidth(16),marginBottom:20,
     borderBottomWidth:1,
-    borderColor:'#555'}]}>Change</Text>
+    borderColor:'#333',fontFamily:'novaregular'}]}>Change</Text>
       <OtpInput
         theme={{
           pinCodeTextStyle: styles.pinCodeText,
@@ -107,7 +107,7 @@ const otp = () => {
               <ActivityIndicator />
             ) : ( */}
             <Text
-              style={{ fontWeight: "bold", fontSize: responsiveFontSize(2.4), color: Colors.backgroundcolor }}
+              style={{  fontSize: responsiveFontSize(2.4), color: Colors.backgroundcolor,fontFamily:'novabold' }}
             >
               Verify
             </Text>
@@ -115,7 +115,7 @@ const otp = () => {
           </TouchableOpacity>
 
       <View style={{ marginTop: 20, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', width: '100%',marginLeft:10 }}>
-        <Text onPress={() => Alert.alert('Resend Code !', 'Are you sure you want to resend OTP')} style={[styles.text1,{color:Colors.primary}]}>Resend OTP</Text>
+        <Text onPress={() => Alert.alert('Resend Code !', 'Are you sure you want to resend OTP')} style={[styles.text1,{color:Colors.primary,fontFamily:'novabold'}]}>Resend OTP</Text>
         
       </View>
 
@@ -147,13 +147,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   subtitle: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: responsiveFontSize(3),
+    fontFamily:'novabold',
     color: '#555'
   },
   text: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(2),
     color: '#555',
+    fontFamily:'novaregular'
   },
   text1: {
     fontSize: 17,
@@ -181,7 +182,8 @@ const styles = StyleSheet.create({
     bottom: 20,
   },
   pinCodeText: {
-    color: '#555'
+    color: '#555',
+    fontFamily:'novabold'
   }
   ,pinCodeContainer:{
     width:responsiveScreenWidth(18),

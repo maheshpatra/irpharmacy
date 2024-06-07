@@ -47,7 +47,7 @@ const login = () => {
           Welcome Back!
         </Text> */}
         <Text
-          style={{marginTop: '5%', alignSelf: "flex-start", fontWeight: "bold", fontSize: responsiveFontSize(2.3), color: '#000',fontFamily:'nova' }}
+          style={{marginTop: '5%', alignSelf: "flex-start", fontSize: responsiveFontSize(2.3), color: '#000',fontFamily:'novabold' }}
         >
           Sign in to Continue
         </Text>
@@ -55,8 +55,9 @@ const login = () => {
         <View style={{ marginTop: '5%',  }}>
           <View style={{ marginTop: 10 }}>
             <View style={styles.inputContainer}>
-              <Text style={{ paddingLeft: 15, color: '#999', fontSize: 17 }}> +91</Text>
+              <Text style={{ paddingLeft: 15, color: '#999', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}> +91</Text>
               <TextInput
+                
                 value={mobile}
                 keyboardType="number-pad"
                 onChangeText={(txt) => setMobile(txt)}
@@ -103,7 +104,7 @@ const login = () => {
               <ActivityIndicator />
             ) : ( */}
             <Text
-              style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
+              style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.3), color: Colors.backgroundcolor }}
             >
               Get verification code
             </Text>
@@ -112,22 +113,22 @@ const login = () => {
 
 
           <Text
-              style={{alignSelf:'center', fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.primary,marginTop:responsiveScreenWidth(7) }}
+              style={{alignSelf:'center', fontFamily:'novabold', fontSize: responsiveFontSize(2), color: Colors.primary,marginTop:responsiveScreenWidth(7) }}
             >
              Sign in with email
             </Text>
             <Text
-              style={{alignSelf:'center',  fontSize: responsiveFontSize(2), color: '#555',marginTop:responsiveScreenWidth(5),borderBottomWidth:1 }}
+              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(2), color: '#555',marginTop:responsiveScreenWidth(5),borderBottomWidth:1 }}
             >
              Have a referral code?
             </Text>
             <Text
-              style={{alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginTop:responsiveScreenWidth(5),}}
+              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginTop:responsiveScreenWidth(5),}}
             >
              By Sign in you agree to our 
             </Text>
             <Text
-              style={{alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginBottom:responsiveScreenWidth(4),borderBottomWidth:1 }}
+              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginBottom:responsiveScreenWidth(4),borderBottomWidth:1 }}
             >
              Terms & conditions  <Text
               style={{alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginBottom:responsiveScreenWidth(4),borderBottomWidth:0 }}
@@ -185,7 +186,8 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     color: '#555',
     width: "70%",
-    fontSize: 17
+    fontSize: responsiveFontSize(2),
+    fontFamily:'novaregular'
   },
   inputfildLabel: {
     fontSize: 16,
