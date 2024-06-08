@@ -54,7 +54,7 @@ export default function OrderConfirm() {
               alignSelf:'center'
             }}
             // disabled={!mobile && mobile?.length != 10}
-           onPress={()=>router.push('checkout')}
+           onPress={()=>router.push('/tabs/orders')}
           >
             {/* {loading ? (
               <ActivityIndicator />

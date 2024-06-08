@@ -11,7 +11,6 @@ import Colors from "../constants/Colors";
 import {
   Entypo, Feather, FontAwesome, Ionicons
 } from "@expo/vector-icons";
-import { Checkbox } from "react-native-paper";
 import { Link, router, useNavigation, useLocalSearchParams } from "expo-router";
 import { _storeData } from "../local_storage";
 import { path } from "../components/server";
@@ -44,56 +43,12 @@ const Signup = () => {
     }else if(data.email == ''){
       Alert.alert('Signup Error','Please Enter Email.')
       return;
-    }else if(data.password == ''){
-      Alert.alert('Signup Error','Please Enter A Password.')
-      return;
     }
-    setLoading(true)
-    let bodyContent = new FormData();
-    bodyContent.append("case", "login");
-    bodyContent.append("name", data.name);
-    bodyContent.append("mobile", mobile);
-    bodyContent.append("email", data.email);
-    bodyContent.append("password", data.password);
-    if(!data.refercode==''){
-      bodyContent.append("refercode", data.refercode);
+    else{
+      router.replace('/tabs')
     }
     
-    console.log(mobile)
-    try {
-      const req = await fetch(path + "login.php", {
-        body: bodyContent,
-        method: 'post'
-      })
-      const res = await req.json();
-      setLoading(false)
-      console.log(res)
-      if(res.error){
-        Alert.alert('Signup Error',res.message);
-        return
-      }else if (res.code == "sucess") {
-        var datab = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id, profile: res.data.image, mobile: res.data.mobile, })
-        _storeData("USER_DATA", datab)
-          .then(v => {
-            var datab = new Object({ refer_code: res.data.refer_code })
-            if (v === "saved") {
-              _storeData("ReferCode", datab)
-                .then(c => {
-                  if (c === "saved") {
-                    console.log(c)
-                    router.replace('/home')
-                  }
-                })
-
-            }
-          })
-          .catch(err => console.log(err));
-        // retrivedata()
-      }
-
-    } catch (err) {
-      console.log(JSON.stringify(err, null, 2));
-    }
+   
   }
 
 
@@ -112,7 +67,7 @@ const Signup = () => {
           marginTop: "20%",
         }}
       >
-        <Image source={require('../assets/images/logo.png')} style={{ height: ts * 40, width: ts * 40, alignSelf: 'center' }} />
+        <Image resizeMode="stretch" source={require('../assets/images/logo.png')} style={{ height: ts * 40, width: ts * 55, alignSelf: 'center' }} />
         <Text
           style={{ alignSelf: "center", fontWeight: "normal", fontSize: 17, color: '#fff', marginTop: 15 }}
         >
@@ -141,7 +96,7 @@ const Signup = () => {
                 style={styles.inputIcon}
                 name="person"
                 size={17}
-                color={Colors.backgroundcolor}
+                color={'#555'}
               />
             </View>
           </View>
@@ -168,100 +123,29 @@ const Signup = () => {
                 style={styles.inputIcon}
                 name="email"
                 size={17}
-                color={Colors.backgroundcolor}
+                color={'  #555'}
               />
             </View>
           </View>
 
-          <View style={{ marginTop: 15 }}>
+          
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                placeholderTextColor={'#ccc'}
-                placeholder="refer code (optional)"
-                maxLength={10}
-                style={styles.inputfild}
-                value={data.phone}
-                onChangeText={(text) =>
-                  setData((prev) => {
-                    return {
-                      ...prev,
-                      refercode: text,
-                    };
-                  })
-                }
-              />
-              <Feather
-                style={styles.inputIcon}
-                name="phone"
-                size={17}
-                color={Colors.backgroundcolor}
-              />
-            </View>
-          </View>
-
-          <View style={{ marginTop: 15 }}>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                placeholderTextColor={'#ccc'}
-                placeholder="Password"
-                secureTextEntry={eye}
-                style={styles.inputfild}
-                value={data.password}
-                onChangeText={(text) =>
-                  setData((prev) => {
-                    return {
-                      ...prev,
-                      password: text,
-                    };
-                  })
-                }
-              />
-              {/* eye / eye-off */}
-              <FontAwesome
-                style={styles.inputIcon}
-                name={eye ? "eye" : "eye-slash"}
-                size={17}
-                color={'#fff'}
-                onPress={() => setEye((prev) => !prev)}
-              />
-            </View>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginTop: 20
-
-            }}
-          >
-            <Checkbox
-              status={isChecked ? "checked" : "unchecked"}
-              onPress={handleCheck}
-              color={Colors.primary}
-            />
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
-              Accept Terms & Conditions
-            </Text>
-          </View>
+       
 
           <TouchableOpacity
             onPress={() => {
-              isChecked ?
-                signup() :
-                Alert.alert('Terms & Conditions', 'Please Accept the terms & conditions ')
+           
+                signup() 
             }}
             style={{
               height: 50,
-              width: "98%",
+              width: "100%",
               backgroundColor: Colors.primary,
               alignItems: "center",
               justifyContent: "center",
               alignSelf: "center",
               marginTop: 30,
-              borderRadius: 8,
+              borderRadius: 6,
             }}
 
           >
@@ -303,7 +187,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     backgroundColor: Colors.sec,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1.5,
     height: 50,
     borderColor: "#ccc",
@@ -320,7 +204,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderColor: "#ccc",
     width: "80%",
-    color: '#fff',
+    color: '#333',
 
   },
   inputfildLabel: {

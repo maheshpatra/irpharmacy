@@ -65,7 +65,7 @@ const otp = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={'light-content'} />
+      <StatusBar barStyle={'dark-content'} />
       <Image resizeMode="contain" source={require('../assets/images/otpicon.png')} style={{ height: responsiveScreenWidth(30), width: 100, position:'absolute',top:'10%',right:'5%' }} />
       <Text style={styles.subtitle}>Confirmation Code</Text>
       <Text style={[styles.text,]}>
@@ -99,7 +99,7 @@ const otp = () => {
             }}
             // disabled={!mobile && mobile?.length != 10}
             onPress={() => {
-              router.push("/tabs")
+              router.push("/signup")
              
             }}
           >

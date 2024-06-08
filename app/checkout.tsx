@@ -5,6 +5,7 @@ import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } fro
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
+import { router } from 'expo-router';
 export default function Checkout() {
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -87,7 +88,7 @@ export default function Checkout() {
               borderRadius: 6,
               width:'40%'
             }}
-           
+            onPress={()=>router.push('/orderconfirm')}
           >
            
             <Text

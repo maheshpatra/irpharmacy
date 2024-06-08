@@ -1,5 +1,5 @@
 import { StatusBar, } from 'expo-status-bar';
-import { View, Text, StyleSheet, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet,Linking, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { ImageSlider } from "react-native-image-slider-banner";
 import { useEffect, useState } from 'react';
@@ -60,14 +60,14 @@ const Home = () => {
                 <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), color: '#000' }}>Order with Prepscription</Text>
                 <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(9), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-con.png')} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={()=>router.push('orderconfirm')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
+              <TouchableOpacity onPress={()=>Linking.openURL(`tel:${'8167553353'}`)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
                 <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), color: '#000' }}>Call to order Medicines</Text>
                 <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(9), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-cicon-2.png')} />
               </TouchableOpacity>
             </View>
           </ImageBackground>}
 
-          <View style={{ marginTop: 25, height: '32%', }} >
+          <View style={{ marginTop: 25, height: '31%', }} >
             <ImageSlider
               preview={false}
               caroselImageStyle={{ resizeMode: 'stretch', height: responsiveScreenWidth(50), }}
