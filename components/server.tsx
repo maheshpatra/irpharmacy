@@ -1,1 +1,1 @@
-export const path='https://dipantan.online/irpharmacy/'
+export const path='http://192.168.31.56/irpharmacy/'

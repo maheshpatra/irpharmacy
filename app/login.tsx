@@ -19,7 +19,6 @@ import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsi
 
 const login = () => {
   const [mobile, setMobile] = useState();
-  const [pass, setPass] = useState(null);
   const navigation = useNavigation();
 
   return (

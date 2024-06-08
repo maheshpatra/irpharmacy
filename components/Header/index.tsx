@@ -2,6 +2,7 @@ import React from 'react'
 import { View,Image, Text, TouchableOpacity, Alert,NativeModules } from 'react-native'
 import Colors from '../../constants/Colors'
 import {Entypo,Ionicons} from '@expo/vector-icons';
+import { responsiveScreenWidth } from 'react-native-responsive-dimensions';
 const Header = ({ title,icon }) => {
     const {StatusBarManager} = NativeModules;
 
@@ -15,7 +16,7 @@ const Header = ({ title,icon }) => {
                 // notification press
             }}
             >
-             <Image  source={require('../../assets/images/logo.png')} style={{height:30,width:30,alignSelf:'center'}} />
+             <Image  source={require('../../assets/images/logo.png')} style={{height:responsiveScreenWidth(11),width:responsiveScreenWidth(17),alignSelf:'center'}} />
               </TouchableOpacity>
 
         </View>

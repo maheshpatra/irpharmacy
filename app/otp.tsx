@@ -35,25 +35,18 @@ const otp = () => {
       if(res.error){
         Alert.alert('Login Error',res.message);
         return;
-      }else if ( res.code === "USER_NOT_REGISTERED") {
+      }else if ( res.code === "NEW_USER") {
         navigation.navigate("signup", {
           mobile
         })
-      } else if (res.code === "USER_REGISTERED") {
+      } else if (res.code === "ALREADY_REGISTERED") {
         const KEY = 'USER_DATA'
-        var data = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id, profile: res.data.image, mobile: res.data.mobile,address:res.data.address,password:res.data.password,dob:res.data.dob,gender:res.data.gender})
+        var data = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id,  mobile: res.data.mobile})
         _storeData(KEY, data)
           .then(v => {
-            var datab = new Object({ refer_code: res.data.refer_code })
             if (v === "saved") {
-              _storeData('ReferCode', datab)
-                .then(c => {
-                  if (c === "saved") {
-                    console.log(c)
                     setLoading(false)
-                    router.replace('/home')
-                  }
-                })
+                    router.replace('/tabs')
             }
           })
           .catch(err => console.log(err));
@@ -72,7 +65,7 @@ const otp = () => {
        A 4 digit code has been sent to:{'\n'}
         {mobile}
       </Text>
-      <Text onPress={() => router.back()} style={[styles.text1,{width:responsiveScreenWidth(16),marginBottom:20,
+      <Text onPress={() => router.back()} style={[styles.text1,{width:responsiveScreenWidth(17),marginBottom:20,
     borderBottomWidth:1,
     borderColor:'#333',fontFamily:'novaregular'}]}>Change</Text>
       <OtpInput
@@ -98,10 +91,7 @@ const otp = () => {
               borderRadius: 8,
             }}
             // disabled={!mobile && mobile?.length != 10}
-            onPress={() => {
-              router.push("/signup")
-             
-            }}
+            onPress={login}
           >
             {/* {loading ? (
               <ActivityIndicator />

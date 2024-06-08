@@ -18,7 +18,7 @@ const prescription = () => {
               <View style={{marginLeft:10,height:'70%',justifyContent:'space-between'}}>
               <Text style={{fontFamily:'novabold',fontSize:responsiveScreenFontSize(2),color:'#333'}}>{'Prescription (Dr sumit kumar)'}</Text>
               <Text style={{fontFamily:'novaregular'}}>{'22 May 2024'}</Text>
-              <View style={{backgroundColor:'#e3f6da',width:responsiveScreenWidth(42),justifyContent:'center',alignItems:'center',height:responsiveScreenWidth(6),borderRadius:10}}>
+              <View style={{backgroundColor:'#e3f6da',width:responsiveScreenWidth(51),justifyContent:'center',alignItems:'center',height:responsiveScreenWidth(6),borderRadius:10}}>
               <Text style={{fontFamily:'novabold',}}>{'Digitalize - click to open'}</Text>
               </View>
               

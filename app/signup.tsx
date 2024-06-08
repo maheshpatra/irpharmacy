@@ -26,9 +26,6 @@ const Signup = () => {
   const [data, setData] = useState({
     email: "",
     name: "",
-    password: "",
-    refercode: "",
-    type: "register",
   });
 
   const handleCheck = () => {
@@ -45,7 +42,41 @@ const Signup = () => {
       return;
     }
     else{
-      router.replace('/tabs')
+      setLoading(true)
+    let bodyContent = new FormData();
+    bodyContent.append("case", "register");
+    bodyContent.append("name", data.name);
+    bodyContent.append("mobile", mobile);
+    bodyContent.append("email", data.email);
+  
+  console.log(mobile)
+    try {
+      const req = await fetch(path + "login.php", {
+        body: bodyContent,
+        method: 'post'
+      })
+      const res = await req.json();
+      setLoading(false)
+      console.log(res)
+      if(res.error){
+        Alert.alert('Signup Error',res.message);
+        return
+      }else if (res.code == "REGISTERED") {
+        setLoading(true)
+        var datab = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id,  mobile: res.data.mobile, })
+        _storeData("USER_DATA", datab)
+          .then(v => {
+            if (v === "saved") {
+                    router.replace('/tabs')
+                  }
+          })
+          .catch(err => console.log(err));
+        // retrivedata()
+      }
+
+    } catch (err) {
+      console.log(JSON.stringify(err, null, 2));
+    }
     }
     
    

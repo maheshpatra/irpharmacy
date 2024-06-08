@@ -22,10 +22,8 @@ const index = () => {
         setVerification(false);
         setTimeout(() => {
           // write your functions    
-          router.replace('/home')
+          router.replace('/tabs')
         }, 3000);
-
-
       } else {
         setTimeout(() => {
           // write your functions    

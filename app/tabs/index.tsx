@@ -1,10 +1,10 @@
 import { StatusBar, } from 'expo-status-bar';
-import { View, Text, StyleSheet,Linking, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text,Dimensions, StyleSheet,Linking, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { ImageSlider } from "react-native-image-slider-banner";
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-
+import Carousel from 'react-native-reanimated-carousel';
 const Home = () => {
   const { StatusBarManager } = NativeModules;
   const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 20 : StatusBarManager.HEIGHT;
@@ -42,7 +42,7 @@ const Home = () => {
     setbgimage(res.background)
   }
 
-
+  const width = Dimensions.get('window').width;
 
 
 
@@ -50,34 +50,46 @@ const Home = () => {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} >
         <View>
-          <StatusBar backgroundColor='#fff' />
+          <StatusBar backgroundColor='#fff' style='dark' />
           {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(65), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{uri:bgimage}} >
             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(3), color: '#fff' }}>Pharmacy</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>Genune</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>And authentic</Text>
             <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '95%', height: responsiveScreenWidth(28), position: 'absolute', bottom: -responsiveScreenWidth(14), alignSelf: 'center' }}>
               <TouchableOpacity onPress={()=>router.push('uploadprescriptions')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
-                <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), color: '#000' }}>Order with Prepscription</Text>
-                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(9), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-con.png')} />
+                <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>Order with Prepscription</Text>
+                <Image resizeMode='cover' style={{ height: responsiveScreenWidth(10.5), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-con.png')} />
               </TouchableOpacity>
               <TouchableOpacity onPress={()=>Linking.openURL(`tel:${'8167553353'}`)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
-                <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), color: '#000' }}>Call to order Medicines</Text>
-                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(9), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-cicon-2.png')} />
+                <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>Call to order Medicines</Text>
+                <Image resizeMode='cover' style={{ height: responsiveScreenWidth(10.5), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-cicon-2.png')} />
               </TouchableOpacity>
             </View>
           </ImageBackground>}
 
-          <View style={{ marginTop: 25, height: '31%', }} >
-            <ImageSlider
-              preview={false}
-              caroselImageStyle={{ resizeMode: 'stretch', height: responsiveScreenWidth(50), }}
-              data={data?.banner}
-              timer={data?.att?.timer}
-              autoPlay={autoplay}
-              onItemChanged={(item) => console.log("item", item)}
-              activeIndicatorStyle={{ backgroundColor: '#555' }}
-              indicatorContainerStyle={{ position: 'absolute', bottom: -60 }}
-
+          <View style={{ marginTop: 12, height: '27%', }} >
+          <Carousel
+                loop
+                width={width}
+                height={width / 2}
+                autoPlay={autoplay}
+               mode='parallax'
+                data={data?.banner}
+                snapEnabled
+                scrollAnimationDuration={data?.att?.timer}
+                // onSnapToItem={(index) => console.log('current index:', index)}
+                renderItem={({ index,item }) => (
+                    <View
+                        style={{
+                           width:'100%',height:responsiveScreenWidth(50),
+                            justifyContent:'center',
+                           alignSelf:'center'
+                        }}
+                    >
+                          <Image resizeMode='cover' style={{ height: '100%', width: '100%' }} source={{uri:item.img}} />
+           
+                    </View>
+                )}
             />
           </View>
 
@@ -87,7 +99,7 @@ const Home = () => {
               tabdata.map((item)=>
                 <View style={{ backgroundColor: '#f1f2f6', height: '100%', width: '23.5%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
 
-              <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(9), width: responsiveScreenWidth(9), alignSelf: 'center', marginTop: 10 }} source={{uri:item.url}} />
+              <Image resizeMode='contain' style={{ height: responsiveScreenWidth(10), width: responsiveScreenWidth(11), alignSelf: 'center', marginTop: 10 }} source={{uri:item.url}} />
               <Text numberOfLines={3} style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(2), color: '#000', marginBottom: 5 }}>{item.name}</Text>
             </View>
               )
