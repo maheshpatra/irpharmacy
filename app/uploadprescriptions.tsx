@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Image, Modal, Alert, ScrollView, FlatList } from 'react-native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import HeaderAB from '../components/HeaderAB'
 import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions'
@@ -9,21 +9,44 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router'
+import { path } from '../components/server'
+import { _retrieveData, _removeData } from "../local_storage";
 export default function UploadPrescriptions() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [image, setImage] = useState(null);
-  const [selecttype, setSelectType] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [selecttype, setSelectType] = useState({
+    id: 1,
+    name: 'Order everything from the prescription',
+    type: 'Instant Order',
+    desc: 'Our Phrmacist will call you and arrange your order - the waiting time is 4-5 min'
+  });
+  const [data, setData] = useState(null)
 
+  useEffect(() => {
+
+    _retrieveData("USER_DATA").then((userdata) => {
+      console.log(userdata);
+      if (userdata && userdata !== 'error') {
+        setData(userdata)
+
+      } else {
+        Alert.alert('Error', 'user not found!')
+
+      }
+
+    });
+  }, [])
   const mydata = [
     {
-      id:1,
+      id: 1,
       name: 'Order everything from the prescription',
       type: 'Instant Order',
       desc: 'Our Phrmacist will call you and arrange your order - the waiting time is 4-5 min'
     },
     {
-      id:2,
+      id: 2,
       name: 'Manual order with digitalized Prescription',
       type: 'Digitalized Order',
       desc: 'Manually select the medicines and quantity and place order according to your need Digitization time 1-2 hours'
@@ -41,7 +64,7 @@ export default function UploadPrescriptions() {
     console.log(result);
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
       setModalVisible(false)
     }
   };
@@ -57,10 +80,57 @@ export default function UploadPrescriptions() {
     console.log(result);
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
       setModalVisible(false)
     }
   };
+
+  const upload = async () => {
+    setLoading(true);
+    if (!image) {
+      Alert.alert('No photo selected', 'Please select a photo first.');
+      return;
+    }
+    const assets_ = {
+      uri: image.uri,
+      name: image.uri.split("/").pop(),
+      type: image.type + "/" + image.uri.split(".").pop(),
+    };
+    let bodyContent = new FormData();
+    bodyContent.append("image", assets_);
+    bodyContent.append("mobile", data.mobile);
+    bodyContent.append("type", selecttype.type);
+    bodyContent.append("name", data.username);
+
+    try {
+      const response = await fetch(path + 'uploadprescription.php', {
+        method: 'POST',
+        body: bodyContent,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const result = await response.json();
+      console.log(result)
+
+      if (!result.error) {
+        setLoading(false)
+        Alert.alert(result.code, result.message);
+        console.log(result.file_path);
+        router.push('/tabs/prescription')
+      } else {
+        setLoading(false)
+        Alert.alert('Upload failed', result.message);
+        
+      }
+    } catch (error) {
+      console.error('Error uploading photo: ', error);
+      Alert.alert('Upload failed', 'An error occurred while uploading the photo.');
+    }
+  }
+
+
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -73,7 +143,7 @@ export default function UploadPrescriptions() {
           {!image ? <Image resizeMode='stretch' source={require('../assets/images/uploadpresctipn.png')} style={{ height: responsiveScreenWidth(40), width: responsiveScreenWidth(40), alignSelf: 'center', marginVertical: responsiveScreenWidth(10) }} />
             :
             <View style={{ height: responsiveScreenWidth(55), width: responsiveScreenWidth(40), alignSelf: 'center', marginTop: responsiveScreenWidth(10) }}>
-              <Image resizeMode='stretch' source={{ uri: image }} style={{ height: responsiveScreenWidth(55), width: responsiveScreenWidth(40), alignSelf: 'center', }} />
+              <Image resizeMode='stretch' source={{ uri: image.uri }} style={{ height: responsiveScreenWidth(55), width: responsiveScreenWidth(40), alignSelf: 'center', }} />
               <AntDesign onPress={() => setImage(null)} name='close' size={20} color={'#fff'} style={{ position: 'absolute', top: 5, right: 5, borderRadius: 20, padding: 5, backgroundColor: '#3a3b3d', elevation: 10 }} />
             </View>
           }
@@ -85,29 +155,29 @@ export default function UploadPrescriptions() {
               <View style={{ width: '100%', borderTopWidth: 5, borderColor: '#ddd', marginTop: 10 }}>
               </View>
               <Text style={{ color: '#333', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.4), marginTop: 10, }}>How would you like us to process your Recquest ?</Text>
-              <View style={{height:responsiveScreenWidth(70)}}>
+              <View style={{ height: responsiveScreenWidth(70) }}>
                 <FlatList
-                data={mydata}
-                renderItem={({ item, index }) =>
-                  <TouchableOpacity onPress={()=>setSelectType(item.id)} style={{ height: responsiveScreenWidth(30), width: '100%', alignSelf: 'center', borderWidth: 1.5, borderRadius: 6, borderColor: '#ddd', marginTop: 15, flexDirection: 'row', alignItems: 'center' }}>
-                    <Fontisto name={item.id==selecttype?'radio-btn-active':'radio-btn-passive'} size={responsiveScreenFontSize(3)} color={item.id==selecttype?'green':'#ccc'} style={{ marginLeft: 15 }} />
-                    <View style={{ marginLeft: 15, width: '70%' }}>
-                      <Text style={{ color: '#333', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), }}>{item.name}<Text style={{ color: 'green', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), marginTop: 10, }}>{'- ' + item.type}</Text></Text>
-                      <Text style={{ color: '#333', fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(1.7), }}>{item.desc}</Text>
-                    </View>
-                    <Image resizeMode='stretch' source={require('../assets/images/homepage-con.png')} style={{ height: responsiveScreenWidth(8), width: responsiveScreenWidth(8), marginLeft: 10 }} />
+                  data={mydata}
+                  renderItem={({ item, index }) =>
+                    <TouchableOpacity onPress={() => setSelectType(item)} style={{ height: responsiveScreenWidth(30), width: '100%', alignSelf: 'center', borderWidth: 1.5, borderRadius: 6, borderColor: '#ddd', marginTop: 15, flexDirection: 'row', alignItems: 'center' }}>
+                      <Fontisto name={item.id == selecttype.id ? 'radio-btn-active' : 'radio-btn-passive'} size={responsiveScreenFontSize(3)} color={item.id == selecttype.id ? 'green' : '#ccc'} style={{ marginLeft: 15 }} />
+                      <View style={{ marginLeft: 15, width: '70%' }}>
+                        <Text style={{ color: '#333', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), }}>{item.name}<Text style={{ color: 'green', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.1), marginTop: 10, }}>{'- ' + item.type}</Text></Text>
+                        <Text style={{ color: '#333', fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(1.7), }}>{item.desc}</Text>
+                      </View>
+                      <Image resizeMode='stretch' source={require('../assets/images/homepage-con.png')} style={{ height: responsiveScreenWidth(8), width: responsiveScreenWidth(8), marginLeft: 10 }} />
 
 
-                  </TouchableOpacity>
+                    </TouchableOpacity>
 
-                }
-              />
+                  }
+                />
               </View>
               <Text style={{ color: '#555', fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(1.7), }}>Your  Assigned pharmasist will make the following selection:</Text>
-              <Text style={{lineHeight:25, color: '#333', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(1.6), }}><FontAwesome   name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{  }} /> Add medicines  <FontAwesome   name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{  }} /> Apply best discount  <FontAwesome   name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{  }} /> Delivery Time  <FontAwesome   name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{  }} /> Delivery Address</Text>
+              <Text style={{ lineHeight: 25, color: '#333', fontFamily: 'novabold', fontSize: responsiveScreenFontSize(1.6), }}><FontAwesome name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{}} /> Add medicines  <FontAwesome name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{}} /> Apply best discount  <FontAwesome name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{}} /> Delivery Time  <FontAwesome name='circle' size={responsiveScreenFontSize(2)} color={'green'} style={{}} /> Delivery Address</Text>
               <TouchableOpacity
                 style={{
-                  height: 50,marginBottom:15,
+                  height: 50, marginBottom: 15,
                   backgroundColor: Colors.primary,
                   alignItems: "center",
                   justifyContent: "center",
@@ -115,7 +185,7 @@ export default function UploadPrescriptions() {
                   borderRadius: 6,
                   width: '100%'
                 }}
-                onPress={() => {router.push('/tabs/prescription'); }}
+                onPress={upload}
               >
 
                 <Text
@@ -152,7 +222,6 @@ export default function UploadPrescriptions() {
             </TouchableOpacity>
             <Text style={{ fontFamily: 'novaregular', marginTop: 20, fontSize: responsiveScreenFontSize(2), color: '#333' }}>All prepscription are encrypted & visible only to our pharamasist. Any prepscription you upload is validate before processing the order</Text>
 
-            <Text style={{ fontFamily: 'novaregular', marginTop: 20, fontSize: responsiveScreenFontSize(2), }}>What is valid prescription ?</Text>
           </View>}
         </View>
 

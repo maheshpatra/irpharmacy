@@ -42,7 +42,7 @@ export default function TabLayout() {
         name="orders"
         options={{
           title: 'Your Order',
-          tabBarIcon: ({ color }) => <Entypo size={28} name="lab-flask" color={color} />,
+          tabBarIcon: ({ color }) => <AntDesign size={28} name="profile" color={color} />,
         }}
         
       />

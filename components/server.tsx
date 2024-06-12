@@ -1,1 +1,1 @@
-export const path='http://192.168.31.56/irpharmacy/'
+export const path='https://irhealthcareservice.com/app_api/'

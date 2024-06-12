@@ -6,9 +6,11 @@ import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenWidth } f
 import Colors from '../constants/Colors'
 import { LinearGradient } from 'expo-linear-gradient';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 
 export default function OrderConfirm() {
+
+  const {data} = useLocalSearchParams();
   return (
     <View style={{flex:1,backgroundColor:'#fff'}}>
         <StatusBar backgroundColor='#fff' />
@@ -37,7 +39,7 @@ export default function OrderConfirm() {
       </LinearGradient>
       <View style={{width:'100%',height:responsiveScreenWidth(32),alignItems:'center',flexDirection:'row',justifyContent:'space-between',paddingHorizontal:responsiveScreenWidth(2)}}>
       <Image resizeMode='stretch' style={{height:responsiveScreenWidth(15),width:responsiveScreenWidth(15),marginLeft:15,borderWidth:1,borderColor:'#ccc',borderRadius:10,padding:5}} source={require('../assets/images/homepage-con.png')} />
-      <Text style={{color:'#555',fontWeight:'bold',fontSize:responsiveFontSize(4),marginRight:10}}>₹ 160.00</Text>
+      {data && <Text style={{color:'#555',fontWeight:'bold',fontSize:responsiveFontSize(4),marginRight:10}}>₹ {data}</Text>}
            
       </View>
 

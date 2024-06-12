@@ -53,7 +53,7 @@ const Home = () => {
           <StatusBar backgroundColor='#fff' style='dark' />
           {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(65), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{uri:bgimage}} >
             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(3), color: '#fff' }}>Pharmacy</Text>
-            <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>Genune</Text>
+            <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>Genuine</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>And authentic</Text>
             <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '95%', height: responsiveScreenWidth(28), position: 'absolute', bottom: -responsiveScreenWidth(14), alignSelf: 'center' }}>
               <TouchableOpacity onPress={()=>router.push('uploadprescriptions')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
@@ -81,12 +81,12 @@ const Home = () => {
                 renderItem={({ index,item }) => (
                     <View
                         style={{
-                           width:'100%',height:responsiveScreenWidth(50),
+                           width:'100%',height:responsiveScreenWidth(54),
                             justifyContent:'center',
                            alignSelf:'center'
                         }}
                     >
-                          <Image resizeMode='cover' style={{ height: '100%', width: '100%' }} source={{uri:item.img}} />
+                          <Image resizeMode='stretch' style={{ height: '100%', width: '100%' }} source={{uri:item.img}} />
            
                     </View>
                 )}
@@ -94,7 +94,7 @@ const Home = () => {
           </View>
 
 
-          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginBottom: responsiveScreenWidth(30) }}>
+          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginBottom: responsiveScreenWidth(16),marginTop:responsiveScreenWidth(3) }}>
             {
               tabdata.map((item)=>
                 <View style={{ backgroundColor: '#f1f2f6', height: '100%', width: '23.5%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>

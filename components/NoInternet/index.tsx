@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, Button } from 'react-native';
+import { Modal, View, Text, StyleSheet, Button, Alert } from 'react-native';
 
 const NoInternetModal = ({ visible }) => (
   <Modal
