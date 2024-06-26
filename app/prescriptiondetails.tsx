@@ -10,6 +10,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { router, useLocalSearchParams } from 'expo-router';
 import { path } from '../components/server';
 import { _retrieveData, _storeData } from '../local_storage';
+import { MaterialIcons } from '@expo/vector-icons';
 export default function PrepscriptionDetails() {
 
 
@@ -76,7 +77,9 @@ export default function PrepscriptionDetails() {
      const gotocheckout = () => {
           console.log()
           const KEY = 'MED'
-          var mydata = new Object({ medicine: items, pdata: pdata, address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount) })
+          const m_data = items.filter(item => item.qty === 1);
+          // console.log(m_data)
+          var mydata = new Object({ medicine: m_data, pdata: pdata[0], address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount) })
           _storeData(KEY, mydata)
                .then(v => {
                     if (v === "saved") {
@@ -117,22 +120,13 @@ export default function PrepscriptionDetails() {
 
 
 
-     const increaseQuantity = (id) => {
-          setItems(items.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item));
+     
+
+     const handleCheck = (id) => {
+          setItems(items.map(item => item.id === id ? { ...item, qty: item.qty === 1 ? 0 : 1 } : item));
      };
 
-     const decreaseQuantity = (id) => {
-          setItems(items.map(item => {
-               if (item.id === id) {
-                    if (item.quantity > 1) {
-                         return { ...item, quantity: item.quantity - 1 };
-                    } else {
-                         return null;
-                    }
-               }
-               return item;
-          }).filter(item => item !== null));
-     };
+    
 
      const deleteItem = (id) => {
           setItems(items.filter(item => item.id !== id));
@@ -155,10 +149,10 @@ export default function PrepscriptionDetails() {
                          ListHeaderComponent={() =>
                               <View>
                                    <View style={{ marginTop: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(12) }}>
-                                      { pdata && <Image resizeMode='cover' style={{ height: responsiveScreenWidth(15), width: responsiveScreenWidth(15), borderRadius: 40 }} source={pdata.gender=='Female' ? require('../assets/images/female.jpg'):require('../assets/images/male.jpg')} />}
+                                        {pdata && <Image resizeMode='cover' style={{ height: responsiveScreenWidth(15), width: responsiveScreenWidth(15), borderRadius: 40 }} source={pdata[0].gender == 'Female' ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')} />}
                                         {pdata && <View style={{ marginLeft: 25, width: '70%', }}>
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>{pdata.p_name}</Text>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>{pdata.gender + " , " + pdata.age + " Years"} </Text>
+                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>{pdata[0].name}</Text>
+                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>{pdata[0].gender + " , " + pdata[0].age + " Years"} </Text>
 
                                         </View>}
 
@@ -171,24 +165,35 @@ export default function PrepscriptionDetails() {
                          renderItem={({ item, index }) =>
 
                               <View style={{ width: '95%', alignSelf: 'center', height: responsiveScreenWidth(22), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
-                                    {item.image ? (
-                                              <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={{uri:item.image}} />
-                                        ) : (
-                                             <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
-                                        )}
-                                     <View style={{ marginLeft: 10, height: '70%', justifyContent: 'space-between', width: '40%', marginRight: 15 }}>
+                                   {item.image ? (
+                                        <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={{ uri: item.image }} />
+                                   ) : (
+                                        <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
+                                   )}
+                                   <View style={{ marginLeft: 10, height: '50%', justifyContent: 'space-between', width: '45%', marginRight: 15 }}>
                                         <Text numberOfLines={1} style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
                                         <Text numberOfLines={1} style={{ fontFamily: 'novaregular' }}>{item.desc}</Text>
-                                        <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
+                                        {/* <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
 
                                              <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ " + item.price}</Text>
                                              <Text style={{ fontFamily: 'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ " + item.original_price}</Text>
                                              <Text style={{ color: 'green', marginLeft: 10, fontFamily: 'novaregular' }}>{item.offer}</Text>
-                                        </View>
+                                        </View> */}
 
                                    </View>
-                                   <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
-                                        {item.quantity > 1 ? (
+                                   <View style={{ width: '15%', height: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }}>
+                                   {item.qty === 0 ? (<MaterialIcons
+                                             onPress={() => handleCheck(item.id)}
+                                             size={responsiveFontSize(3.5)} name="check-box-outline-blank" color={'#367F52'} />)
+                                             :
+                                             (<MaterialIcons
+                                                  onPress={() => handleCheck(item.id)}
+                                                  size={responsiveFontSize(3.5)} name="check-box" color={'#367F52'} />)
+                                             
+                                             }
+                                   </View>
+                                   {/* <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
+                                        {item.qty > 1 ? (
                                              <AntDesign onPress={() => decreaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="minus" color={'#367F52'} />
                                         ) : (
                                              <AntDesign onPress={() => decreaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="delete" color={'#367F52'} />
@@ -196,18 +201,18 @@ export default function PrepscriptionDetails() {
                                         
                                         
 
-                                        <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.quantity}</Text>
+                                        <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
                                         <AntDesign onPress={() => increaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="plus" color={'#367F52'} />
-                                   </View>
+                                   </View> */}
                               </View>
                          }
                          ListFooterComponent={() =>
                               <View>
                                    <View style={{ borderTopWidth: 5, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 5, paddingBottom: 2 }}>
                                         <View style={{ width: '90%', alignSelf: 'center' }}>
-                                             <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text>
+                                             {/* <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text> */}
 
-                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
+                                             {/* <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Item total'}</Text>
                                                   {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {getTotalPrice().toFixed(2)}</Text>}
                                              </View>
@@ -223,7 +228,7 @@ export default function PrepscriptionDetails() {
 
                                                   <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
                                                   {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(getTotalPrice().toFixed(2)) - discount}</Text>}
-                                             </View>
+                                             </View> */}
                                              {address ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
                                                   <Text numberOfLines={1} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{address}</Text>
@@ -232,25 +237,25 @@ export default function PrepscriptionDetails() {
                                         </View>
 
                                    </View>
-                                   {!address && <View style={{ borderTopWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
+                                   <View style={{ borderTopWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
 
-                                        <Text style={{ color: '#333', fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}><Entypo size={responsiveFontSize(3)} name="location-pin" color={'#367F52'} /> Tamluk</Text>
-                                        <Text onPress={() => setModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold' }}>{'Add Address'}</Text>
-                                   </View>}
+                                        <Text style={{ color: '#333', fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}><Entypo size={responsiveFontSize(3)} name="location-pin" color={'#367F52'} /> Address</Text>
+                                        <Text onPress={() => setModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold' }}>{'Add New Address'}</Text>
+                                   </View>
                               </View>
                          }
                     />
                </View>
-               <View style={{ height: responsiveScreenHeight(14), width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd' }}>
-                    {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {getTotalPrice().toFixed(2) - discount}</Text>}
-
+               <View style={{ height: responsiveScreenHeight(12), width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd' }}>
+                    {/* {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {getTotalPrice().toFixed(2) - discount}</Text>} */}
+                    <View />
                     <TouchableOpacity
                          style={{
                               height: 50,
                               backgroundColor: Colors.primary,
                               alignItems: "center",
                               justifyContent: "center",
-                              marginTop: 10,
+
                               borderRadius: 6,
                               width: '40%'
                          }}
