@@ -1,4 +1,4 @@
-import { View,ScrollView, Text, FlatList, Image, TouchableOpacity, Alert, Modal, TextInput } from 'react-native'
+import { View,ScrollView, Text, FlatList, Image, TouchableOpacity, Alert, Modal, TextInput, ToastAndroid } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import HeaderAB from '../components/HeaderAB'
 import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth,responsiveScreenFontSize } from 'react-native-responsive-dimensions'
@@ -17,7 +17,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [id, setid] = useState(null);
   const [fulladd, setfulladd] = useState(null);
-  const [discount, setdiscount] = useState(40);
+  const [discount, setdiscount] = useState(0);
   const [total, settotal] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [pin, setpin] = useState(null);
@@ -32,8 +32,8 @@ export default function Checkout() {
         setpdata(mdata.pdata)
         setaddress(mdata.address)
         setid(mdata.id)
-        setdiscount(mdata.discount)
-        settotal(mdata.total)
+        setdiscount(mdata.discount?mdata.discount:0)
+     //    settotal(mdata.total)
       } else {
         Alert.alert('Error', 'user not found!')
       }
@@ -76,14 +76,16 @@ export default function Checkout() {
 }
 
  const handelPlaceOrder = async () => {
+     const m_data = items.filter(item => item.qty === 1);
   setLoading(true)
-  const t = Number(160) - discount;
+  const t = getTotalPrice() - discount;
   const fd = new FormData();
   fd.append("case", "order")
   fd.append("mobile", data?.mobile)
-  fd.append("order_details", JSON.stringify(items))
+  fd.append("order_details", JSON.stringify(m_data))
   fd.append("prescription_id", id)
   fd.append("address",address )
+  fd.append("discount",discount )
   fd.append("amount",t )
   fd.append("pdata",JSON.stringify(pdata) )
   console.log(fd)
@@ -93,14 +95,14 @@ export default function Checkout() {
       body: fd,
       method: 'POST'
     })
-    const res = await req.text();
+    const res = await req.json();
     console.log(res)
-    // if(res.error){
-    //   Alert.alert('Error ',res.message)
-    // }else{
-    //   router.replace({ pathname: `/orderconfirm`, params: { data:Number(160) - discount }})
-    // }
-    // setLoading(false)
+    if(res.error){
+      Alert.alert('Error ',res.message)
+    }else{
+      router.replace({ pathname: `/orderconfirm`, params: { data:getTotalPrice() - discount }})
+    }
+    setLoading(false)
   } catch (err) {
     console.log(JSON.stringify(err, null, 2));
   }
@@ -119,13 +121,13 @@ export default function Checkout() {
 
   
   const getTotalPrice = () => {
-    return items.reduce((total, item) => total + item.price * item.qty, 1);
+    return items.reduce((total, item) => total + Number(item.price?item.price:0) * item.qty, 0);
   };
 
   const decreaseQuantity = (id) => {
     setItems(items.map(item => {
          if (item.id === id) {
-              if (item.qty > 0) {
+              if (item.qty > 1) {
                    return { ...item, qty: item.qty - 1 };
               } else {
                    return null;
@@ -156,7 +158,7 @@ const deleteItem = (id) => {
              <View style={{ marginLeft: 10, height: '70%', justifyContent: 'space-between', width: '40%', marginRight: 15 }}>
                 <Text numberOfLines={1} style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
                 <Text numberOfLines={1} style={{ fontFamily: 'novaregular' }}>{item.desc}</Text>
-                <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2), color: '#333' }}>{"₹ 80.00"}</Text>
+                {item.status == "available"? <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2), color: '#333' }}>{"₹ "+Number(item.price)}</Text>:<Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2), color: 'red' }}>{"Not Available"}</Text>}
                 {/* <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
 
                      <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ " + item.price}</Text>
@@ -165,15 +167,15 @@ const deleteItem = (id) => {
                 </View> */}
 
            </View>
-           <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
+           <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor:item.status == "available"? '#367F52':'#ccc', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
               
-                     <AntDesign onPress={() => decreaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="minus" color={'#367F52'} />
+                     <AntDesign onPress={() =>{item.status == "available"?item.qty>1 ?  decreaseQuantity(item.id):ToastAndroid.show('You have to select atleast 1 quantity .', ToastAndroid.SHORT):null}} size={responsiveFontSize(2.5)} name="minus" color={item.status == "available"? '#367F52':'#ccc'} />
                 
                 
                 
 
-                <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
-                <AntDesign onPress={() => increaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="plus" color={'#367F52'} />
+                <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color:item.status == "available"?'#333':'#ccc'  }}>{item.qty}</Text>
+                <AntDesign onPress={() =>{item.status == "available"? increaseQuantity(item.id):null} } size={responsiveFontSize(2.5)} name="plus" color={item.status == "available"? '#367F52':'#ccc'} />
            </View>
       </View>
           }
@@ -185,8 +187,8 @@ const deleteItem = (id) => {
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                     <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Item total'}</Text>
-                    {/* {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {getTotalPrice().toFixed(2)}</Text>} */}
-                    {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {'160'}</Text>}
+                    {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {getTotalPrice().toFixed(2)}</Text>}
+                    {/* {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {'160'}</Text>} */}
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                     <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Shipping fee'}</Text>
@@ -194,14 +196,14 @@ const deleteItem = (id) => {
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                     <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Total Discount'}</Text>
-                    {/* <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'- ₹'+ discount}</Text> */}
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'- ₹'+ Number(40)}</Text>
+                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'- ₹'+ discount}</Text>
+                    {/* <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'- ₹'+ Number(40)}</Text> */}
                   </View>
                   <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
                     <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
-                    {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(getTotalPrice().toFixed(2)) - discount}</Text>} */}
-                    {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>}
+                    {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹  {(getTotalPrice()-discount).toFixed(2)}</Text>}
+                    {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>} */}
                   </View>
                   <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                     <Text style={{ color: '#555', fontSize: responsiveFontSize(2) }}>{'Address'}</Text>
@@ -220,18 +222,24 @@ const deleteItem = (id) => {
         />
       </View>
       <View style={{ height: responsiveScreenHeight(10), width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd',position:'absolute',bottom:0 }}>
-        {items &&<Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(3), }}>₹ {Number(160) - discount}</Text>}
+        {items &&<Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(3), }}>₹ {(getTotalPrice()-discount).toFixed(2)}</Text>}
 
         <TouchableOpacity
           style={{
             height: 50,
-            backgroundColor: Colors.primary,
+            backgroundColor:items && (getTotalPrice()-discount) > 0 ? Colors.primary:'#ccc',
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 6,
             width: '40%'
           }}
-          onPress={handelPlaceOrder}
+          onPress={()=>{
+               if(items &&(getTotalPrice()-discount)>0){
+                    handelPlaceOrder()
+               }else{
+
+               }
+          }}
         >
 
           <Text

@@ -31,6 +31,57 @@ export default function PrepscriptionDetails() {
      const [items, setItems] = useState(null);
      const [loading, setLoading] = useState(false);
 
+
+
+     const getmedprice = async () => {
+          const m_data = items.filter(item => item.qty === 1);
+          const mydata = JSON.stringify({ data: m_data, pincode: pin })
+          let bodyContent = new FormData();
+          bodyContent.append("medDetail", mydata);
+          bodyContent.append("case", "mediciDetail");
+
+          let response = await fetch("https://irhealthcareservice.com/app_api/medicine.php", {
+               method: "POST",
+               body: bodyContent
+          });
+
+          let data_ = await response.json();
+          console.log(data);
+          if (data_.error) {
+               const KEY = 'MED'
+              
+               // console.log(m_data)
+               var my_data = new Object({ medicine: m_data, pdata: pdata[0], address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
+               _storeData(KEY, my_data)
+                    .then(v => {
+                         if (v === "saved") {
+                              setLoading(false)
+                              router.replace('/checkout')
+                         }
+                    })
+                    .catch(err => console.log(err));
+
+          } else {
+               const KEY = 'MED'
+               
+               // console.log(m_data)
+               var mdata = new Object({ medicine: data_, pdata: pdata[0], address: address, id: data, discount: discount, total: 0 - discount })
+               _storeData(KEY, mdata)
+                    .then(v => {
+                         if (v === "saved") {
+                              setLoading(false)
+                              router.replace('/checkout')
+                         }
+                    })
+                    .catch(err => console.log(err));
+          }
+
+     }
+
+
+
+
+
      const saveaddress = () => {
           if (!pin) {
                Alert.alert('Opps', 'please enter a valid details')
@@ -59,6 +110,7 @@ export default function PrepscriptionDetails() {
           _retrieveData("ADDRESS").then((userdata) => {
                console.log(userdata);
                if (userdata && userdata !== 'error') {
+                    setpin(userdata.pin)
                     setaddress(userdata.fulladd + ' ' + userdata.pin + ' ' + userdata.type)
 
                } else {
@@ -76,18 +128,7 @@ export default function PrepscriptionDetails() {
 
      const gotocheckout = () => {
           console.log()
-          const KEY = 'MED'
-          const m_data = items.filter(item => item.qty === 1);
-          // console.log(m_data)
-          var mydata = new Object({ medicine: m_data, pdata: pdata[0], address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount) })
-          _storeData(KEY, mydata)
-               .then(v => {
-                    if (v === "saved") {
-                         setLoading(false)
-                         router.replace('/checkout')
-                    }
-               })
-               .catch(err => console.log(err));
+          getmedprice()
      }
 
      const getprescription = async () => {
@@ -120,19 +161,19 @@ export default function PrepscriptionDetails() {
 
 
 
-     
+
 
      const handleCheck = (id) => {
           setItems(items.map(item => item.id === id ? { ...item, qty: item.qty === 1 ? 0 : 1 } : item));
      };
 
-    
+
 
      const deleteItem = (id) => {
           setItems(items.filter(item => item.id !== id));
      };
      const getTotalPrice = () => {
-          return items.reduce((total, item) => total + item.price * item.quantity, 1);
+          return items.reduce((total, item) => total + Number(item.price) * item.quantity, 1);
      };
 
      function percentage(percent, total) {
@@ -182,15 +223,15 @@ export default function PrepscriptionDetails() {
 
                                    </View>
                                    <View style={{ width: '15%', height: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }}>
-                                   {item.qty === 0 ? (<MaterialIcons
+                                        {item.qty === 0 ? (<MaterialIcons
                                              onPress={() => handleCheck(item.id)}
                                              size={responsiveFontSize(3.5)} name="check-box-outline-blank" color={'#367F52'} />)
                                              :
                                              (<MaterialIcons
                                                   onPress={() => handleCheck(item.id)}
                                                   size={responsiveFontSize(3.5)} name="check-box" color={'#367F52'} />)
-                                             
-                                             }
+
+                                        }
                                    </View>
                                    {/* <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
                                         {item.qty > 1 ? (
@@ -285,9 +326,9 @@ export default function PrepscriptionDetails() {
                          setModalVisible(!modalVisible);
                     }}>
                     <View style={{ flex: 1, backgroundColor: '#000', opacity: .9 }}>
-                         <View style={{ position: 'absolute', bottom: 0, height: responsiveScreenHeight(70), backgroundColor: '#fff', width: '100%' }}>
-                              <View style={{ height: '85%' }}>
-                                   <ScrollView>
+                         <View style={{ position: 'absolute', bottom: 0, height: responsiveScreenHeight(65), backgroundColor: '#fff', width: '100%' }}>
+                              <View style={{ height: '90%' }}>
+                                   <ScrollView >
                                         <View style={{ borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(15), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
 
                                              <Text style={{ color: '#555', fontFamily: 'novabold', marginLeft: 20, fontSize: responsiveFontSize(2.3) }}>Add Address Details</Text>

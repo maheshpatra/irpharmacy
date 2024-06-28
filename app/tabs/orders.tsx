@@ -68,6 +68,7 @@ export default function Orders() {
       <Header title={'Your Order'} />
       {orders.length> 0 ?<FlatList
           data={orders}
+          
           renderItem={({item,index}) =>
 
             <TouchableOpacity onPress={()=>router.push({ pathname: `/orderdetails`, params: { data:item.id }})} style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(30), borderBottomWidth:2,borderColor:'#ccc', flexDirection:'row',alignItems:'center'}}>
@@ -86,7 +87,7 @@ export default function Orders() {
           }
         />:
         <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-          <Text style={{fontFamily:'novabold' ,fontSize:21,color:'#555'}}>No Prescription found ! </Text>
+          <Text style={{fontFamily:'novabold' ,fontSize:21,color:'#555'}}>No Order found ! </Text>
           </View>
         }
     </View>

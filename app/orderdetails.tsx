@@ -25,6 +25,7 @@ export default function OrderDetails() {
     
         const [items, setItems] = useState(null);
         const [loading, setLoading] = useState(false);
+        const [mydata, setMydata] = useState(null);
        
        
       
@@ -45,8 +46,10 @@ export default function OrderDetails() {
        setItems(JSON.parse(res.data.order_details))
        setpdata(JSON.parse(res.data.p_data))
        setStatus(res.data.status)
-       setDiscount(res.data.amount)
+       setDiscount(res.data.discount)
        setaddress(res.data.address)
+       setMydata(res.data)
+
        setLoading(false)
      } catch (err) {
        console.log(JSON.stringify(err, null, 2));
@@ -67,7 +70,7 @@ export default function OrderDetails() {
     setItems(items.map(item => item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item));
   };
   const getTotalPrice = () => {
-     return items.reduce((total, item) => total + item.price * item.quantity, 1);
+     return items.reduce((total, item) => total + Number(item.price?item.price:0) * item.qty, 0);
    };
 
    function percentage(percent, total) {
@@ -81,25 +84,40 @@ export default function OrderDetails() {
                     <FlatList
                          data={items}
                          showsVerticalScrollIndicator={false}
-                         
+                         ListHeaderComponent={() =>
+                              <View>
+                                   <View style={{ marginTop: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(12) }}>
+                                        {pdata && <Image resizeMode='cover' style={{ height: responsiveScreenWidth(15), width: responsiveScreenWidth(15), borderRadius: 40 }} source={pdata.gender == 'Female' ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')} />}
+                                        {pdata && <View style={{ marginLeft: 25, width: '70%', }}>
+                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>{pdata.name}</Text>
+                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>{pdata.gender + " , " + pdata.age + " Years"} </Text>
+
+                                        </View>}
+
+                                   </View>
+
+                                   {image && <Image resizeMode='stretch' source={{ uri: image }} style={{ backgroundColor: '#ccc', height: responsiveScreenWidth(51), width: responsiveScreenWidth(45), alignSelf: 'center', marginVertical: responsiveScreenWidth(5) }} />}
+                              </View>
+
+                         }
                          renderItem={({item,index}) =>
 
                               <View style={{ width: '95%', alignSelf: 'center', height: responsiveScreenWidth(22), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
-                                   <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/homepage-con.png')} />
+                                   <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
                                    <View style={{ marginLeft: 10, height: '70%', justifyContent: 'space-between', width: '40%', marginRight: 15 }}>
                                         <Text numberOfLines={1} style={{fontFamily:'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
                                         <Text numberOfLines={1} style={{fontFamily:'novaregular'}}>{item.desc}</Text>
-                                        <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
+                                       
 
                                              <Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ "+item.price}</Text>
-                                             <Text style={{fontFamily:'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ "+item.original_price}</Text>
-                                             <Text style={{ color: 'green', marginLeft: 10,fontFamily:'novaregular' }}>{item.offer}</Text>
-                                        </View>
+                                             {/* <Text style={{fontFamily:'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ "+item.original_price}</Text> */}
+                                           
+                                        
 
                                    </View>
-                                   <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,}}>
+                                   <View style={{ width: '20%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,}}>
                                         {/* <AntDesign  size={responsiveFontSize(2.5)} name="minus" color={'#367F52'} /> */}
-                                        <Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.quantity}</Text>
+                                        <Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
                                         {/* <AntDesign  size={responsiveFontSize(2.5)} name="plus" color={'#367F52'} /> */}
                                    </View>
                               </View>
@@ -112,7 +130,7 @@ export default function OrderDetails() {
 
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Item total'}</Text>
-                                                  {items &&<Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {getTotalPrice().toFixed(2)}</Text>}
+                                                  {items &&<Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
                                              </View>
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Shipping fee'}</Text>
@@ -120,12 +138,12 @@ export default function OrderDetails() {
                                              </View>
                                            {items&&  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Total Discount'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{ Number(getTotalPrice().toFixed(2))-discount }</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{ mydata?.discount }</Text>
                                              </View>}
                                              <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
                                                   <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>Bill total</Text>
-                                                 {items && <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>₹ {discount}</Text>}
+                                                 {items && <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>₹ {mydata?.amount}</Text>}
                                              </View>
                                              {address &&<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2) }}>{'Address'}</Text>
@@ -169,94 +187,7 @@ export default function OrderDetails() {
 
 
                </View>  */}
-               <Modal
-                    animationType="slide"
-                    transparent={true}
-                    visible={modalVisible}
-                    onRequestClose={() => {
-                         Alert.alert('Modal has been closed.');
-                         setModalVisible(!modalVisible);
-                    }}>
-                    <View style={{ flex: 1, backgroundColor: '#000', opacity: .9 }}>
-                         <View style={{ position: 'absolute', bottom: 0, height: responsiveScreenHeight(70), backgroundColor: '#fff', width: '100%' }}>
-                              <View style={{height:'85%'}}>
-                              <ScrollView>
-                                   <View style={{ borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(15), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
-
-                                        <Text style={{ color: '#555', fontFamily: 'novabold', marginLeft: 20, fontSize: responsiveFontSize(2.3) }}>Add Address Details</Text>
-                                        <AntDesign onPress={() => setModalVisible(false)} style={{ marginRight: 20, padding: 5 }} size={responsiveScreenFontSize(2.3)} name="close" color={'#555'} />
-                                   </View>
-                                   <View style={{ marginVertical: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(10), }}>
-                                        <Entypo size={responsiveFontSize(3)} name="location-pin" color={'#333'} />
-                                        <View style={{ marginLeft: 25, width: '70%', }}>
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>Makal hati mouza</Text>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>Maheshtal </Text>
-                                        </View>
-                                   </View>
-                                   <View style={{ marginTop: 0, borderTopWidth: 1, borderColor: '#ccc', width: '100%', paddingTop: 15 }}>
-                                        <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginBottom: 20 }}>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Pincode* </Text>
-                                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                                  <TextInput style={{ width: '50%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular' }} />
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2.), marginLeft: 10 }}>Kolkata-West Bengal </Text>
-                                             </View>
-                                        </View>
-                                        <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>House number,floor,building name,locality* </Text>
-                                             <TextInput style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                        </View>
-                                        <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Recipient's name* </Text>
-                                             <TextInput style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                        </View>
-                                        <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Phone Number* </Text>
-                                             <TextInput style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                        </View>
-                                        <View style={{ width: '90%', alignSelf: 'center', marginTop: responsiveScreenWidth(5) }}>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Address Type* </Text>
-                                             <FlatList
-                                                  data={['Home', 'Office', 'Other']}
-                                                  horizontal
-                                                  renderItem={({ item }) =>
-                                                       <TouchableOpacity onPress={() => setaddresstype(item)} style={{ height: 30, width: responsiveScreenWidth(20), borderRadius: 4, borderColor: addresstype == item ? '#000' : '#555', justifyContent: 'center', alignItems: 'center', borderWidth: 1, marginRight: 10, marginTop: 15 }}>
-                                                            <Text style={{ color: addresstype == item ? '#000' : '#555', fontFamily: addresstype == item ? 'novabold' : 'novaregular' }}>{item}</Text>
-                                                       </TouchableOpacity>
-                                                  }
-
-                                             />
-                                        </View>
-
-                                   </View>
-                              </ScrollView>
-                              </View>
-                         </View>
-
-                         <TouchableOpacity
-                              style={{
-                                   height: 50,
-                                   backgroundColor: Colors.primary,
-                                   alignItems: "center",
-                                   justifyContent: "center",
-                                   marginTop: 10,
-                                   borderRadius: 6,
-                                   width: '70%',
-                                   alignSelf:'center',bottom:10,position:'absolute'
-                              }}
-                           onPress={()=>{
-                              setModalVisible(false)
-                              setaddress('kolkata 897956')}}
-                         >
-
-                              <Text
-                                   style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
-                              >
-                                   Save Address
-                              </Text>
-                              {/* )} */}
-                         </TouchableOpacity>
-                    </View>
-               </Modal>
+               
           </View>
      )
 }

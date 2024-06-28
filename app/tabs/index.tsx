@@ -1,6 +1,6 @@
 import { StatusBar, } from 'expo-status-bar';
 import { View, Text, Dimensions, StyleSheet, Linking, Image, Platform, NativeModules, ImageBackground, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
-import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions';
+import { responsiveScreenFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { ImageSlider } from "react-native-image-slider-banner";
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
@@ -66,7 +66,7 @@ const Home = () => {
       <ScrollView showsVerticalScrollIndicator={false} >
         <View>
           <StatusBar backgroundColor='#fff' style='dark' />
-          {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(65), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{ uri: bgimage }} >
+          {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(55), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{ uri: bgimage }} >
             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(3), color: '#fff' }}>Pharmacy</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>Genuine</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>And authentic</Text>
@@ -108,22 +108,8 @@ const Home = () => {
             />
           </View>
 
-
-          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginTop: responsiveScreenWidth(3) }}>
-            {
-              tabdata.map((item) =>
-                <View style={{ backgroundColor: '#f1f2f6', height: '100%', width: '23.5%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
-
-                  <Image resizeMode='contain' style={{ height: responsiveScreenWidth(10), width: responsiveScreenWidth(11), alignSelf: 'center', marginTop: 10 }} source={{ uri: item.url }} />
-                  <Text numberOfLines={3} style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(2), color: '#000', marginBottom: 5 }}>{item.name}</Text>
-                </View>
-              )
-            }
-
-
-
-          </View>
-          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(16), marginTop:'8%' }}>
+          <View style={{ justifyContent: 'space-between',  width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), marginTop:'2%' }}>
+          <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>The Brands We Deal With</Text>
             <FlatList
               data={brandImages}
               contentContainerStyle={{alignSelf:'center',justifyContent:'space-between'}}
@@ -138,6 +124,40 @@ const Home = () => {
 
 
           </View>
+          <View style={{ justifyContent: 'space-between',  width: '95%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), marginTop:'2%' }}>
+          <FlatList
+              data={[
+                "https://irhealthcareservice.com//app_api/homepage/images/chywanfit.png",
+                "https://irhealthcareservice.com//app_api/homepage/images/REVITAL.png"
+              ]}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{alignSelf:'center',justifyContent:'space-between'}}
+              renderItem={({ item }) =>
+              
+
+                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(35), width: responsiveScreenWidth(65), alignSelf: 'center',marginLeft:responsiveScreenWidth(2.5),marginRight:10  }} source={{ uri: item }} />
+
+              }
+              
+            />
+            </View>
+            
+          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginTop: responsiveScreenWidth(0) ,marginBottom:responsiveScreenHeight(10)}}>
+            {
+              tabdata.map((item) =>
+                <View style={{ backgroundColor: '#f1f2f6', height: '100%', width: '23.5%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
+
+                  <Image resizeMode='contain' style={{ height: responsiveScreenWidth(10), width: responsiveScreenWidth(11), alignSelf: 'center', marginTop: 10 }} source={{ uri: item.url }} />
+                  <Text numberOfLines={3} style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(2), color: '#000', marginBottom: 5 }}>{item.name}</Text>
+                </View>
+              )
+            }
+
+
+
+          </View>
+          
 
 
         </View>
