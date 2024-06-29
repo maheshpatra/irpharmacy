@@ -124,7 +124,7 @@ export default function OrderDetails() {
                          }
                          ListFooterComponent={() =>
                               <View>
-                                   <View style={{ borderTopWidth: 5, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 5, paddingBottom: 2 }}>
+                                   <View style={{ borderTopWidth: 2, borderColor: '#ddd', marginTop: 20, paddingBottom: 2 }}>
                                         <View style={{ width: '90%', alignSelf: 'center' }}>
                                              <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2),fontFamily:'novabold' }}>Bill summary</Text>
 

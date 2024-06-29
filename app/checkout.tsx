@@ -76,7 +76,7 @@ export default function Checkout() {
 }
 
  const handelPlaceOrder = async () => {
-     const m_data = items.filter(item => item.qty === 1);
+     const m_data = items.filter(item => item.qty >= 1);
   setLoading(true)
   const t = getTotalPrice() - discount;
   const fd = new FormData();
@@ -181,7 +181,7 @@ const deleteItem = (id) => {
           }
           ListFooterComponent={() =>
             <View>
-              <View style={{ borderTopWidth: 5, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 5, paddingBottom: 2 }}>
+              <View style={{ borderTopWidth: 2, borderColor: '#ddd', marginTop: 20,  paddingBottom: 2 }}>
                 <View style={{ width: '90%', alignSelf: 'center' }}>
                   <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text>
 
@@ -206,16 +206,16 @@ const deleteItem = (id) => {
                     {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>} */}
                   </View>
                   <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                    <Text style={{ color: '#555', fontSize: responsiveFontSize(2) }}>{'Address'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontWeight: 'bold' }}>{address}</Text>
+                    <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova' }}>{'Address'}</Text>
+                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold'}}>{address}</Text>
                   </TouchableOpacity>
                 </View>
 
               </View>
-              <View style={{ borderTopWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
+              <View style={{ borderTopWidth: 1.5, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '90%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
 
-                <Text style={{ color: '#555', fontSize: responsiveFontSize(2.2) }}>Payment Mode</Text>
-                <Text style={{ color: '#555', fontSize: responsiveFontSize(2), }}>{'Cash On Delivery  '}<AntDesign size={responsiveFontSize(2)} name="down" color={'#367F52'} /></Text>
+                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova' }}>Payment Mode</Text>
+                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova'  }}>{'Cash On Delivery  '}<AntDesign size={responsiveFontSize(2)} name="down" color={'#367F52'} /></Text>
               </View>
             </View>
           }

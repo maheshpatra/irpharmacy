@@ -183,7 +183,7 @@ export default function PrepscriptionDetails() {
           <View style={{ flex: 1, backgroundColor: '#fff' }}>
                <HeaderAB title={'Prescription Details'} />
                {status && <Text style={{ alignSelf: 'center', color: 'green', fontFamily: 'novabold' }}>{status}</Text>}
-               <View style={{ height: responsiveScreenHeight(68) }}>
+               <View style={{ height: responsiveScreenHeight(70) }}>
                     <FlatList
                          data={items}
                          showsVerticalScrollIndicator={false}
@@ -249,7 +249,7 @@ export default function PrepscriptionDetails() {
                          }
                          ListFooterComponent={() =>
                               <View>
-                                   <View style={{ borderTopWidth: 5, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 5, paddingBottom: 2 }}>
+                                   <View style={{ borderTopWidth: 1, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 1, paddingBottom: 2 }}>
                                         <View style={{ width: '90%', alignSelf: 'center' }}>
                                              {/* <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text> */}
 
@@ -287,7 +287,7 @@ export default function PrepscriptionDetails() {
                          }
                     />
                </View>
-               <View style={{ height: responsiveScreenHeight(12), width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd' }}>
+               <View style={{  width: '100%', flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd',position:'absolute',bottom:0,backgroundColor:'#fff' }}>
                     {/* {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {getTotalPrice().toFixed(2) - discount}</Text>} */}
                     <View />
                     <TouchableOpacity
@@ -296,7 +296,7 @@ export default function PrepscriptionDetails() {
                               backgroundColor: Colors.primary,
                               alignItems: "center",
                               justifyContent: "center",
-
+                              marginRight:20,
                               borderRadius: 6,
                               width: '40%'
                          }}

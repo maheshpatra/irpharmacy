@@ -66,7 +66,7 @@ const Home = () => {
       <ScrollView showsVerticalScrollIndicator={false} >
         <View>
           <StatusBar backgroundColor='#fff' style='dark' />
-          {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(55), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{ uri: bgimage }} >
+          {bgimage && <ImageBackground resizeMode='stretch' style={{ width: responsiveScreenWidth(100), height: responsiveScreenWidth(68), marginTop: STATUSBAR_HEIGHT, marginBottom: responsiveScreenWidth(14), justifyContent: 'center', paddingLeft: responsiveScreenWidth(5) }} source={{ uri: bgimage }} >
             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(3), color: '#fff' }}>Pharmacy</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>Genuine</Text>
             <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4.5), color: '#fff' }}>And authentic</Text>
@@ -82,7 +82,7 @@ const Home = () => {
             </View>
           </ImageBackground>}
 
-          <View style={{ marginTop: 12, height: '20%', }} >
+          <View style={{ marginTop: 12, height: '18%', }} >
             <Carousel
               loop
               width={width}
@@ -108,7 +108,7 @@ const Home = () => {
             />
           </View>
 
-          <View style={{ justifyContent: 'space-between',  width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), marginTop:'2%' }}>
+          <View style={{ justifyContent: 'space-between',  width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5),  }}>
           <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>The Brands We Deal With</Text>
             <FlatList
               data={brandImages}
@@ -136,7 +136,7 @@ const Home = () => {
               renderItem={({ item }) =>
               
 
-                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(35), width: responsiveScreenWidth(65), alignSelf: 'center',marginLeft:responsiveScreenWidth(2.5),marginRight:10  }} source={{ uri: item }} />
+                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(40), width: responsiveScreenWidth(68), alignSelf: 'center',marginLeft:responsiveScreenWidth(2.5),marginRight:10  }} source={{ uri: item }} />
 
               }
               
