@@ -130,7 +130,7 @@ export default function OrderDetails() {
 
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Item total'}</Text>
-                                                  {items &&<Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
+                                                  {items &&<Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
                                              </View>
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Shipping fee'}</Text>
@@ -146,8 +146,8 @@ export default function OrderDetails() {
                                                  {items && <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>₹ {mydata?.amount}</Text>}
                                              </View>
                                              {address &&<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                                                  <Text style={{ color: '#555', fontSize: responsiveFontSize(2) }}>{'Address'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontWeight: 'bold' }}>{address}</Text>
+                                                  <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Address'}</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold', }}>{address}</Text>
                                              </View> }
                                         </View>
 
