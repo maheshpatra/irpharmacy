@@ -10,47 +10,53 @@ import { AntDesign } from "@expo/vector-icons";
 import { _storeData, _retrieveData } from '../local_storage';
 import { path } from "../components/server";
 import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsive-dimensions";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 // import { StatusBar } from "expo-status-bar";
 
 const otp = () => {
   const { mobile } = useLocalSearchParams()
   const navigation = useNavigation()
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false)
+  const statusBarHeight = insets.top;
 
-
-  const login = async () => {
+  const login = async (mob) => {
     setLoading(true)
     const fd = new FormData();
-    fd.append("mobile", mobile)
-    fd.append("case", 'login')
+    const payload = new URLSearchParams({
+      action:"get_verification",
+      mobile:mob
+    })
     try {
       const req = await fetch(path + "login.php", {
-        body: fd,
+        headers:{
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: payload.toString(),
         method: 'post'
       })
-      const res = await req.json();
-      console.log(res)
+      const result = await req.json();
+      console.log(result)
       setLoading(false)
-
-      if(res.error){
-        Alert.alert('Login Error',res.message);
-        return;
-      }else if ( res.code === "NEW_USER") {
-        navigation.navigate("signup", {
-          mobile
-        })
-      } else if (res.code === "ALREADY_REGISTERED") {
-        const KEY = 'USER_DATA'
-        var data = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id,  mobile: res.data.mobile})
-        _storeData(KEY, data)
-          .then(v => {
-            if (v === "saved") {
-                    setLoading(false)
-                    router.replace('/tabs')
-            }
-          })
-          .catch(err => console.log(err));
-      }
+      // if(res.error){
+      //   Alert.alert('Login Error',res.message);
+      //   return;
+      // }else if ( res.code === "NEW_USER") {
+      //   navigation.navigate("signup", {
+      //     mobile
+      //   })
+      // } else if (res.code === "ALREADY_REGISTERED") {
+      //   const KEY = 'USER_DATA'
+      //   var data = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id,  mobile: res.data.mobile})
+      //   _storeData(KEY, data)
+      //     .then(v => {
+      //       if (v === "saved") {
+      //               setLoading(false)
+      //               router.replace('/tabs')
+      //       }
+      //     })
+      //     .catch(err => console.log(err));
+      // }
     } catch (err) {
       console.log(JSON.stringify(err, null, 2));
     }
@@ -59,6 +65,9 @@ const otp = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle={'dark-content'} />
+      <AntDesign onPress={()=>{
+        router.back()
+      }} name="left" color={'#333'} size={responsiveFontSize(2.5)} style={{position:'absolute',top:statusBarHeight+20,left:20,padding:10,borderRadius:20}} />
       <Image resizeMode="contain" source={require('../assets/images/otpicon.png')} style={{ height: responsiveScreenWidth(30), width: 100, position:'absolute',top:'10%',right:'5%' }} />
       <Text style={styles.subtitle}>Confirmation Code</Text>
       <Text style={[styles.text,]}>
@@ -91,7 +100,7 @@ const otp = () => {
               borderRadius: 8,
             }}
             // disabled={!mobile && mobile?.length != 10}
-            onPress={login}
+            onPress={()=>login(mobile)}
           >
             {/* {loading ? (
               <ActivityIndicator />

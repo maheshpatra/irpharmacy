@@ -16,10 +16,61 @@ import { AntDesign } from "@expo/vector-icons";
 import { Link, router, useNavigation } from "expo-router";
 import { ScrollView } from "react-native-gesture-handler";
 import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsive-dimensions";
+import { path } from "../components/server";
 
 const login = () => {
-  const [mobile, setMobile] = useState();
+  const [mobile, setMobile] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+
+
+  const validateNumber = (val) => {
+    const numberRegex = /^\d+(\.\d+)?$/; // Matches integers and decimals
+    return numberRegex.test(val);
+  };
+
+
+
+  const sendotp = async (val) => {
+    if (val.length < 10) {
+      ToastAndroid.show("Please enter valid mobile number", ToastAndroid.SHORT);
+      return
+    }
+    if (!validateNumber(val)) {
+      ToastAndroid.show("Please enter valid mobile number", ToastAndroid.SHORT);
+      return
+    }
+    console.log(val)
+    setLoading(true)
+    
+    try {
+     
+      let headersList = {
+        "Accept": "*/*"
+       }
+       
+       let bodyContent = new FormData();
+       bodyContent.append("action", "get_verification");
+       bodyContent.append("mobile", val);
+       console.log(bodyContent)
+       let response = await fetch(path+"login.php", { 
+         method: "POST",
+         body: bodyContent,
+         headers: headersList
+       });
+       
+       let data = await response.json();
+       console.log(data);
+       if(data?.status == 'success'){
+        ToastAndroid.show("OTP sent successfully", ToastAndroid.SHORT);
+        navigation.navigate('otp', { mobile: val });
+       }
+    } catch (err) {
+      console.log(JSON.stringify(err, null, 2));
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <View
@@ -32,7 +83,7 @@ const login = () => {
       }}
     >
 
-      <StatusBar barStyle={'dark-content'}  />
+      <StatusBar barStyle={'dark-content'} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -40,23 +91,22 @@ const login = () => {
 
         }}
       >
-        <Image source={require('../assets/images/logo.png')} style={{ height: 60, width: 100, position:'absolute',top:0,right:0 }} />
-        <Image source={require('../assets/images/loginpage-icon.png')} style={{ height: 200, width: 200, alignSelf: 'center',marginTop:responsiveScreenWidth(20) }} />
+        <Image source={require('../assets/images/logo.png')} style={{ height: 60, width: 100, position: 'absolute', top: 0, right: 0 }} />
+        <Image source={require('../assets/images/loginpage-icon.png')} style={{ height: 200, width: 200, alignSelf: 'center', marginTop: responsiveScreenWidth(20) }} />
         {/* <Text style={{ alignSelf: "center", fontWeight: "bold", fontSize: 26, marginTop: 20, color: '#33D3AF' }}>
           Welcome Back!
         </Text> */}
         <Text
-          style={{marginTop: '5%', alignSelf: "flex-start", fontSize: responsiveFontSize(2.3), color: '#000',fontFamily:'novabold' }}
+          style={{ marginTop: '5%', alignSelf: "flex-start", fontSize: responsiveFontSize(2.3), color: '#000', fontFamily: 'novabold' }}
         >
           Sign in to Continue
         </Text>
 
-        <View style={{ marginTop: '5%',  }}>
+        <View style={{ marginTop: '5%', }}>
           <View style={{ marginTop: 10 }}>
             <View style={styles.inputContainer}>
-              <Text style={{ paddingLeft: 15, color: '#999', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}> +91</Text>
+              <Text style={{ paddingLeft: 15, color: '#999', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}> +91</Text>
               <TextInput
-                
                 value={mobile}
                 keyboardType="number-pad"
                 onChangeText={(txt) => setMobile(txt)}
@@ -88,59 +138,49 @@ const login = () => {
               marginTop: 10,
               borderRadius: 12,
             }}
-            // disabled={!mobile && mobile?.length != 10}
+            disabled={loading}
             onPress={() => {
-              if (!mobile || mobile?.length < 10) {
-                alert("Please Enter a correct number")
-                return;
-              }
-              navigation.navigate("otp", {
-                mobile: mobile
-              })
+              sendotp(mobile)
             }}
           >
-            {/* {loading ? (
-              <ActivityIndicator />
-            ) : ( */}
-            <Text
-              style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.3), color: Colors.backgroundcolor }}
-            >
-              Get verification code
-            </Text>
-            {/* )} */}
+            {loading ? (
+              <ActivityIndicator color={'#fff'} />
+            ) : (
+              <Text
+                style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: Colors.backgroundcolor }}
+              >
+                Get verification code
+              </Text>
+            )}
           </TouchableOpacity>
 
 
+          
           <Text
-              style={{alignSelf:'center', fontFamily:'novabold', fontSize: responsiveFontSize(2), color: Colors.primary,marginTop:responsiveScreenWidth(7) }}
+            style={{ fontFamily: 'novaregular', alignSelf: 'center', fontSize: responsiveFontSize(2), color: '#555', marginTop: responsiveScreenWidth(5), borderBottomWidth: 1 }}
+          >
+            Have a referral code?
+          </Text>
+          <Text
+            style={{ fontFamily: 'novaregular', alignSelf: 'center', fontSize: responsiveFontSize(1.6), color: '#555', marginTop: responsiveScreenWidth(5), }}
+          >
+            By Sign in you agree to our
+          </Text>
+          <Text
+            style={{ fontFamily: 'novaregular', alignSelf: 'center', fontSize: responsiveFontSize(1.6), color: '#555', marginBottom: responsiveScreenWidth(4), borderBottomWidth: 1 }}
+          >
+            Terms & conditions  <Text
+              style={{ alignSelf: 'center', fontSize: responsiveFontSize(1.6), color: '#555', marginBottom: responsiveScreenWidth(4), borderBottomWidth: 0 }}
             >
-             Sign in with email
-            </Text>
-            <Text
-              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(2), color: '#555',marginTop:responsiveScreenWidth(5),borderBottomWidth:1 }}
-            >
-             Have a referral code?
-            </Text>
-            <Text
-              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginTop:responsiveScreenWidth(5),}}
-            >
-             By Sign in you agree to our 
-            </Text>
-            <Text
-              style={{fontFamily:'novaregular',alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginBottom:responsiveScreenWidth(4),borderBottomWidth:1 }}
-            >
-             Terms & conditions  <Text
-              style={{alignSelf:'center',  fontSize: responsiveFontSize(1.6), color: '#555',marginBottom:responsiveScreenWidth(4),borderBottomWidth:0 }}
-            >
-             and  
-            </Text> Privacy policy 
-            </Text>
+              and
+            </Text> Privacy policy
+          </Text>
 
 
 
-          
 
-          
+
+
         </View>
       </ScrollView>
     </View>
@@ -186,7 +226,7 @@ const styles = StyleSheet.create({
     color: '#555',
     width: "70%",
     fontSize: responsiveFontSize(2),
-    fontFamily:'novaregular'
+    fontFamily: 'novaregular'
   },
   inputfildLabel: {
     fontSize: 16,
