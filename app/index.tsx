@@ -39,9 +39,9 @@ const index = () => {
   const ts = Dimensions.get('screen').width / 100
   return (
     <View style={styles.container}>
-      <Image resizeMode="contain" source={require('../assets/images/logo.png')} style={{ height: ts * 40, width: ts * 80, alignSelf: 'center' }} />
+      <Image resizeMode="contain" source={require('../assets/images/homelogo.png')} style={{ height: ts * 70, width: ts * 70, alignSelf: 'center' }} />
       
-      <Text style={styles.subtitle}>Affordable Health Care</Text>
+
 
       <NoInternetModal visible={!isConnected} />
     </View>

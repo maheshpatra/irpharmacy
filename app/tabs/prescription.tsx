@@ -89,9 +89,9 @@ const prescription = () => {
                 );
               }
            
-            }} style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(30), borderBottomWidth:2,borderColor:'#ccc', flexDirection:'row',alignItems:'center'}}>
-              {item.image && <Image style={{height:50,width:50,marginLeft:15}} source={{uri:item.image}} />}
-              {!item.image &&<Image style={{height:50,width:50,marginLeft:15}} source={require('../../assets/images/homepage-con.png')} />}
+            }} style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(30), borderWidth:1,borderColor:'#ccc', flexDirection:'row',alignItems:'center',marginTop:15,borderRadius:4,elevation:5,backgroundColor:'#fff'}}>
+              {item.image && <Image style={{height:50,width:50,marginLeft:15,borderRadius:8}} source={{uri:item.image}} />}
+              {!item.image &&<Image style={{height:50,width:50,marginLeft:15,borderRadius:8}} source={require('../../assets/images/homepage-con.png')} />}
               <View style={{marginLeft:10,height:'70%',justifyContent:'space-between'}}>
               <Text style={{fontFamily:'novabold',fontSize:responsiveScreenFontSize(2),color:'#333'}}>{item.name}</Text>
               <Text style={{fontFamily:'novaregular'}}>{item.date}</Text>

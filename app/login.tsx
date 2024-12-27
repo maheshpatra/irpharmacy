@@ -18,7 +18,7 @@ import { ScrollView } from "react-native-gesture-handler";
 import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsive-dimensions";
 import { path } from "../components/server";
 
-const login = () => {
+const login = ({ newuser }) => {
   const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
@@ -42,29 +42,33 @@ const login = () => {
     }
     console.log(val)
     setLoading(true)
-    
+
     try {
-     
+
       let headersList = {
         "Accept": "*/*"
-       }
-       
-       let bodyContent = new FormData();
-       bodyContent.append("action", "get_verification");
-       bodyContent.append("mobile", val);
-       console.log(bodyContent)
-       let response = await fetch(path+"login.php", { 
-         method: "POST",
-         body: bodyContent,
-         headers: headersList
-       });
-       
-       let data = await response.json();
-       console.log(data);
-       if(data?.status == 'success'){
+      }
+
+      let bodyContent = new FormData();
+      bodyContent.append("action", "get_verification");
+      bodyContent.append("mobile", val);
+      console.log(bodyContent)
+      let response = await fetch(path + "login.php", {
+        method: "POST",
+        body: bodyContent,
+        headers: headersList
+      });
+
+      let data = await response.json();
+      console.log(data);
+      if (data?.status == 'success') {
         ToastAndroid.show("OTP sent successfully", ToastAndroid.SHORT);
-        navigation.navigate('otp', { mobile: val });
-       }
+        if (data?.code === 'NEW_USER') {
+          navigation.navigate('otp', { mobile: val, newuser: true })
+        } else {
+          navigation.navigate('otp', { mobile: val, newuser: false })
+        }
+      }
     } catch (err) {
       console.log(JSON.stringify(err, null, 2));
     } finally {
@@ -88,14 +92,11 @@ const login = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={{
-
         }}
       >
-        <Image source={require('../assets/images/logo.png')} style={{ height: 60, width: 100, position: 'absolute', top: 0, right: 0 }} />
+        <Image source={require('../assets/images/logo.png')} style={{ height: 60, width: 60, position: 'absolute', top: 0, right: 0 }} />
         <Image source={require('../assets/images/loginpage-icon.png')} style={{ height: 200, width: 200, alignSelf: 'center', marginTop: responsiveScreenWidth(20) }} />
-        {/* <Text style={{ alignSelf: "center", fontWeight: "bold", fontSize: 26, marginTop: 20, color: '#33D3AF' }}>
-          Welcome Back!
-        </Text> */}
+
         <Text
           style={{ marginTop: '5%', alignSelf: "flex-start", fontSize: responsiveFontSize(2.3), color: '#000', fontFamily: 'novabold' }}
         >
@@ -155,12 +156,8 @@ const login = () => {
           </TouchableOpacity>
 
 
-          
-          <Text
-            style={{ fontFamily: 'novaregular', alignSelf: 'center', fontSize: responsiveFontSize(2), color: '#555', marginTop: responsiveScreenWidth(5), borderBottomWidth: 1 }}
-          >
-            Have a referral code?
-          </Text>
+
+
           <Text
             style={{ fontFamily: 'novaregular', alignSelf: 'center', fontSize: responsiveFontSize(1.6), color: '#555', marginTop: responsiveScreenWidth(5), }}
           >
@@ -173,7 +170,7 @@ const login = () => {
               style={{ alignSelf: 'center', fontSize: responsiveFontSize(1.6), color: '#555', marginBottom: responsiveScreenWidth(4), borderBottomWidth: 0 }}
             >
               and
-            </Text> Privacy policy
+            </Text> Privacy Policy
           </Text>
 
 

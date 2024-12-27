@@ -5,12 +5,15 @@ import { ImageSlider } from "react-native-image-slider-banner";
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import Carousel from 'react-native-reanimated-carousel';
+import SkeletonPlaceholder from "react-native-skeleton-placeholder";
+import BannerComponent from '../../components/BannerComponent';
 const Home = () => {
   const { StatusBarManager } = NativeModules;
   const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 20 : StatusBarManager.HEIGHT;
   const [data, setdata] = useState([])
   const [tabdata, settabdata] = useState([])
   const [autoplay, setautoplay] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [bgimage, setbgimage] = useState(null)
   useEffect(() => {
 
@@ -18,19 +21,31 @@ const Home = () => {
     gettabdata()
 
   }, [])
-
+  const SkeletonLoader = () => (
+    <TouchableOpacity style={{ height: responsiveScreenWidth(45), width: '100%', alignSelf: 'center', marginTop: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}>
+      <SkeletonPlaceholder backgroundColor='#ddd' >
+        <SkeletonPlaceholder.Item width={responsiveScreenWidth(5)} height={'100%'} alignSelf='center' borderRadius={10} />
+      </SkeletonPlaceholder>
+      <SkeletonPlaceholder backgroundColor='#ddd' >
+        <SkeletonPlaceholder.Item width={responsiveScreenWidth(85)} height={'100%'} alignSelf='center' borderRadius={10} />
+      </SkeletonPlaceholder>
+      <SkeletonPlaceholder backgroundColor='#ddd' >
+        <SkeletonPlaceholder.Item width={responsiveScreenWidth(5)} height={'100%'} alignSelf='center' borderRadius={10} />
+      </SkeletonPlaceholder>
+    </TouchableOpacity>
+  );
   const brandImages = [
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-1.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-2.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-3.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-4.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-5.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-6.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-7.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-8.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-9.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-10.jpg",
-    "https://irhealthcareservice.com/landing/assets/images/brand-logo/brand-logo-11.jpg"
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-1.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-2.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-3.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-4.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-5.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-6.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-7.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-8.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-9.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-10.jpg",
+    "https://irhealthcareservice.com/assets/images/brand-logo/brand-logo-11.jpg"
   ];
 
 
@@ -41,6 +56,7 @@ const Home = () => {
     });
 
     let res = await response.json();
+    console.log(res)
     setdata(res)
     console.log(res.att.timer)
     setautoplay(res.att.autoslide)
@@ -83,40 +99,27 @@ const Home = () => {
           </ImageBackground>}
 
           <View style={{ marginTop: 12, height: '18%', }} >
-            <Carousel
-              loop
-              width={width}
-              height={width / 2}
-              autoPlay={autoplay}
-              mode='parallax'
-              data={data?.banner}
-              snapEnabled
-              scrollAnimationDuration={data?.att?.timer}
-              // onSnapToItem={(index) => console.log('current index:', index)}
-              renderItem={({ index, item }) => (
-                <View
-                  style={{
-                    width: '100%', height: responsiveScreenWidth(52),
-                    justifyContent: 'center',
-                    alignSelf: 'center', borderRadius: 10
-                  }}
-                >
-                  <Image resizeMode='stretch' style={{ borderRadius: 15, height: '100%', width: responsiveScreenWidth(96) }} source={{ uri: item.img }} />
 
-                </View>
+            
+           
+              {loading ? (
+                <SkeletonLoader />
+              ) : (
+                data?.banner?.length > 0 && (
+                  <BannerComponent h={responsiveScreenWidth(45)} images={data?.banner}  />
+                )
               )}
-            />
           </View>
 
-          <View style={{ justifyContent: 'space-between',  width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5),  }}>
-          <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>The Brands We Deal With</Text>
+          <View style={{ justifyContent: 'space-between', width: '90%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), }}>
+            <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>The Brands We Deal With</Text>
             <FlatList
               data={brandImages}
-              contentContainerStyle={{alignSelf:'center',justifyContent:'space-between'}}
+              contentContainerStyle={{ alignSelf: 'center', justifyContent: 'space-between' }}
               renderItem={({ item }) =>
-              
 
-                <Image resizeMode='contain' style={{ height: responsiveScreenWidth(20), width: '30%', alignSelf: 'center',marginLeft:responsiveScreenWidth(2.5)  }} source={{ uri: item }} />
+
+                <Image resizeMode='contain' style={{ height: responsiveScreenWidth(20), width: '30%', alignSelf: 'center', marginLeft: responsiveScreenWidth(2.5) }} source={{ uri: item }} />
 
               }
               numColumns={3}
@@ -124,26 +127,26 @@ const Home = () => {
 
 
           </View>
-          <View style={{ justifyContent: 'space-between',  width: '95%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), marginTop:'2%' }}>
-          <FlatList
+          <View style={{ justifyContent: 'space-between', width: '95%', alignSelf: 'center', marginBottom: responsiveScreenWidth(5), marginTop: '2%' }}>
+            <FlatList
               data={[
                 "https://irhealthcareservice.com//app_api/homepage/images/chywanfit.png",
                 "https://irhealthcareservice.com//app_api/homepage/images/REVITAL.png"
               ]}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{alignSelf:'center',justifyContent:'space-between'}}
+              contentContainerStyle={{ alignSelf: 'center', justifyContent: 'space-between' }}
               renderItem={({ item }) =>
-              
 
-                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(40), width: responsiveScreenWidth(68), alignSelf: 'center',marginLeft:responsiveScreenWidth(2.5),marginRight:10  }} source={{ uri: item }} />
+
+                <Image resizeMode='stretch' style={{ height: responsiveScreenWidth(40), width: responsiveScreenWidth(68), alignSelf: 'center', marginLeft: responsiveScreenWidth(2.5), marginRight: 10 }} source={{ uri: item }} />
 
               }
-              
+
             />
-            </View>
-            
-          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginTop: responsiveScreenWidth(0) ,marginBottom:responsiveScreenHeight(10)}}>
+          </View>
+
+          <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '96%', height: responsiveScreenWidth(32), alignSelf: 'center', marginTop: responsiveScreenWidth(0), marginBottom: responsiveScreenHeight(10) }}>
             {
               tabdata.map((item) =>
                 <View style={{ backgroundColor: '#f1f2f6', height: '100%', width: '23.5%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
@@ -157,7 +160,7 @@ const Home = () => {
 
 
           </View>
-          
+
 
 
         </View>

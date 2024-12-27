@@ -9,16 +9,16 @@ import { responsiveScreenFontSize } from 'react-native-responsive-dimensions';
 export default function TabLayout() {
   
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#000' ,
+    <Tabs screenOptions={{ tabBarActiveTintColor: 'green' ,
       headerShown:false,
       tabBarStyle:{
         height:65,
         paddingBottom:8,
-        paddingTop:8
+        paddingTop:8,borderTopLeftRadius:15,borderTopRightRadius:15,backgroundColor:'#ddd'
       },
       tabBarLabelStyle:{
-        fontSize:responsiveScreenFontSize(1.6),
-        fontFamily:'novaregular'
+        fontSize:responsiveScreenFontSize(1.5),
+        fontFamily:'novabold'
       }
     
     }}>

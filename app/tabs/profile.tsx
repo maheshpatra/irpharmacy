@@ -1,15 +1,20 @@
 import { View, Image, Text, FlatList, TouchableOpacity, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Header from '../../components/Header'
-import { responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions'
+import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions'
 import { _retrieveData, _removeData } from "../../local_storage";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import EmailUpdate from '../../components/EmailUpdate';
+
 export default function profile() {
 
   const [data, setData] = useState(null)
-
-
+  const [isPopupVisible, setPopupVisible] = useState(false);
+  const handleUpdateEmail = (email) => {
+    console.log('Updated Email:', email);
+  };
   useEffect(() => {
 
     _retrieveData("USER_DATA").then((userdata) => {
@@ -30,7 +35,7 @@ export default function profile() {
       <Header title={'Profile'} />
 
       <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(4), color: '#333', marginLeft: 18 }}>Hi there!</Text>
-      <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(2.2), color: 'green', marginLeft: 18 }}>Joined in may 2024</Text>
+      <Text style={{ fontFamily: 'novaregular', fontSize: responsiveScreenFontSize(2.2), color: 'green', marginLeft: 18 }}>Joined in jan 2025</Text>
 
       <View style={{ marginTop: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(12) }}>
         <Image resizeMode='center' style={{ height: responsiveScreenWidth(8), width: responsiveScreenWidth(8), marginLeft: 15 }} source={require('../../assets/images/nameicon.png')} />
@@ -54,11 +59,17 @@ export default function profile() {
         <Image resizeMode='center' style={{ height: responsiveScreenWidth(8), width: responsiveScreenWidth(8), marginLeft: 15 }} source={require('../../assets/images/iconnew-2.png')} />
         <View style={{ marginLeft: 25, width: '70%', }}>
           <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.2), color: '#333', }}>Email Id</Text>
-          <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: 'green', }}>{data?.email}</Text>
+          <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: 'green', }}>{data?.email?data?.email:'No email found'}</Text>
 
         </View>
-
+        <Feather onPress={() => setPopupVisible(true)} style={{padding:2}} name='edit-3' size={responsiveFontSize(2.5)} color={'#333'} />
       </View>
+
+      <EmailUpdate
+        visible={isPopupVisible}
+        onClose={() => setPopupVisible(false)}
+        onUpdate={handleUpdateEmail}
+      />
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',width:'85%',alignSelf:'center',marginTop:'15%'}}> 
       <TouchableOpacity style={{ flexDirection: 'row', width: '48%', alignSelf: 'center', height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 6, borderWidth: 1, borderColor: '#333', marginTop: 10 }}>
         <Image resizeMode='center' style={{ height: responsiveScreenWidth(6), width: responsiveScreenWidth(6), marginHorizontal: 15 }} source={require('../../assets/images/contctus-icon.png')} />

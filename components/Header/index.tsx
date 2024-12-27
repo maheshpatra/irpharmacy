@@ -16,7 +16,7 @@ const Header = ({ title,icon }) => {
                 // notification press
             }}
             >
-             <Image  source={require('../../assets/images/logo.png')} style={{height:responsiveScreenWidth(11),width:responsiveScreenWidth(17),alignSelf:'center'}} />
+             <Image  source={require('../../assets/images/logo.png')} style={{height:responsiveScreenWidth(11),width:responsiveScreenWidth(11),alignSelf:'center'}} />
               </TouchableOpacity>
 
         </View>

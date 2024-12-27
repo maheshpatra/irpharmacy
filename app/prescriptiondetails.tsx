@@ -11,6 +11,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { path } from '../components/server';
 import { _retrieveData, _storeData } from '../local_storage';
 import { MaterialIcons } from '@expo/vector-icons';
+import AddressList from '../components/AddressList';
 export default function PrepscriptionDetails() {
 
 
@@ -27,10 +28,50 @@ export default function PrepscriptionDetails() {
      const [recipt, setrecipt] = useState(null);
      const [num, setnum] = useState();
 
-
+     const [lmodalVisible, setlModalVisible] = useState(false);
      const [items, setItems] = useState(null);
      const [loading, setLoading] = useState(false);
-
+     const addresses = [
+          {
+               id: 1,
+               recipientName: 'John Doe',
+               phoneNumber: '1234567890',
+               fullAddress: '123 Main St, Springfield, IL',
+               pincode: '62704',
+               addressType: 'Home',
+          },
+          {
+               id: 2,
+               recipientName: 'Jane Smith',
+               phoneNumber: '9876543210',
+               fullAddress: '456 Elm St, Chicago, IL',
+               pincode: '60601',
+               addressType: 'Work',
+          },
+          {
+               id: 3,
+               recipientName: 'Robert Brown',
+               phoneNumber: '5556667777',
+               fullAddress: '789 Maple Ave, Naperville, IL',
+               pincode: '60540',
+               addressType: 'Parents',
+          },
+          {
+               id: 4,
+               recipientName: 'Robert Brown',
+               phoneNumber: '5556667777',
+               fullAddress: '789 Maple Ave, Naperville, IL',
+               pincode: '60540',
+               addressType: 'Parents',
+          },{
+               id: 5,
+               recipientName: 'Jane Smith',
+               phoneNumber: '9876543210',
+               fullAddress: '456 Elm St, Chicago, IL',
+               pincode: '60601',
+               addressType: 'Work',
+          },
+     ];
 
 
      const getmedprice = async () => {
@@ -49,7 +90,7 @@ export default function PrepscriptionDetails() {
           console.log(data);
           if (data_.error) {
                const KEY = 'MED'
-              
+
                // console.log(m_data)
                var my_data = new Object({ medicine: m_data, pdata: pdata[0], address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
                _storeData(KEY, my_data)
@@ -63,7 +104,7 @@ export default function PrepscriptionDetails() {
 
           } else {
                const KEY = 'MED'
-               
+
                // console.log(m_data)
                var mdata = new Object({ medicine: data_, pdata: pdata[0], address: address, id: data, discount: discount, total: 0 - discount })
                _storeData(KEY, mdata)
@@ -114,7 +155,7 @@ export default function PrepscriptionDetails() {
                     setaddress(userdata.fulladd + ' ' + userdata.pin + ' ' + userdata.type)
 
                } else {
-                    //    Alert.alert('Error','user not found!')
+
 
                }
 
@@ -167,6 +208,14 @@ export default function PrepscriptionDetails() {
           setItems(items.map(item => item.id === id ? { ...item, qty: item.qty === 1 ? 0 : 1 } : item));
      };
 
+     const handleSelectAddress = (address) => {
+          Alert.alert(
+            'Selected Address',
+            `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
+          );
+          setModalVisible(false);
+        };
+
 
 
      const deleteItem = (id) => {
@@ -199,7 +248,7 @@ export default function PrepscriptionDetails() {
 
                                    </View>
 
-                                   {image && <Image resizeMode='stretch' source={{ uri: image }} style={{ backgroundColor: '#ccc', height: responsiveScreenWidth(51), width: responsiveScreenWidth(45), alignSelf: 'center', marginVertical: responsiveScreenWidth(5) }} />}
+                                   {image && <Image resizeMode='stretch' source={{ uri: image }} style={{ backgroundColor: '#ccc', height: responsiveScreenWidth(51), width: responsiveScreenWidth(45), alignSelf: 'center', marginVertical: responsiveScreenWidth(5), borderRadius: 8 }} />}
                               </View>
 
                          }
@@ -272,7 +321,7 @@ export default function PrepscriptionDetails() {
                                              </View> */}
                                              {address ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
-                                                  <Text numberOfLines={1} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{address}</Text>
+                                                  <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>
                                              </View> : <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                              </View>}
                                         </View>
@@ -287,7 +336,7 @@ export default function PrepscriptionDetails() {
                          }
                     />
                </View>
-               <View style={{  width: '100%', flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd',position:'absolute',bottom:0,backgroundColor:'#fff' }}>
+               <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd', position: 'absolute', bottom: 0, backgroundColor: '#fff' }}>
                     {/* {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {getTotalPrice().toFixed(2) - discount}</Text>} */}
                     <View />
                     <TouchableOpacity
@@ -296,7 +345,7 @@ export default function PrepscriptionDetails() {
                               backgroundColor: Colors.primary,
                               alignItems: "center",
                               justifyContent: "center",
-                              marginRight:20,
+                              marginRight: 20,
                               borderRadius: 6,
                               width: '40%'
                          }}
@@ -317,6 +366,12 @@ export default function PrepscriptionDetails() {
 
 
                </View>
+               <AddressList
+                    visible={lmodalVisible}
+                    onClose={() => setlModalVisible(false)}
+                    addresses={addresses}
+                    onSelect={handleSelectAddress}
+               />
                <Modal
                     animationType="slide"
                     transparent={true}

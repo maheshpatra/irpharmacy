@@ -205,17 +205,17 @@ const deleteItem = (id) => {
                     {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹  {(getTotalPrice()-discount).toFixed(2)}</Text>}
                     {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>} */}
                   </View>
-                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                    <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova' }}>{'Address'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold'}}>{address}</Text>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%',  }}>
+                    <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}>{'Address'}</Text>
+                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold',width:'45%',paddingVertical:5}}>{address}</Text>
                   </TouchableOpacity>
                 </View>
 
               </View>
               <View style={{ borderTopWidth: 1.5, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '90%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
 
-                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova' }}>Payment Mode</Text>
-                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'nova'  }}>{'Cash On Delivery  '}<AntDesign size={responsiveFontSize(2)} name="down" color={'#367F52'} /></Text>
+                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}>Payment Mode</Text>
+                <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novabold'  }}>{'Cash On Delivery  '}<AntDesign size={responsiveFontSize(2)} name="down" color={'#367F52'} /></Text>
               </View>
             </View>
           }
