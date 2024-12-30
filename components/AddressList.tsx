@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
+import { path } from './server';
 
 const AddressList = ({ visible, onClose, addresses, onSelect }) => {
   const renderItem = ({ item }) => (
@@ -20,6 +21,37 @@ const AddressList = ({ visible, onClose, addresses, onSelect }) => {
       <Text style={styles.addressType}>Type: {item.addressType}</Text>
     </TouchableOpacity>
   );
+  const addAddress = async (mobileno, usermob, pname, address) => {
+    try {
+      const response = await fetch(path+'address.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation: 'add', 
+          mobileno,
+          usermob,
+          pname,
+          address,
+        }),
+      });
+  
+      const data = await response.json();
+      if (data.status === 'success') {
+        alert(data.message);
+      } else {
+        alert(`Error: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Error adding address:', error);
+      alert('Failed to add address. Please try again.');
+    }
+  };
+
+  useEffect(()=>{
+
+  },[])
 
   return (
     <Modal

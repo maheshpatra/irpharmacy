@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Image, TouchableOpacity, Modal, Alert, TextInput } from 'react-native'
+import { View, Text, FlatList, Image, TouchableOpacity, Modal, Alert, TextInput, ToastAndroid, ActivityIndicator } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import HeaderAB from '../components/HeaderAB'
 import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions'
@@ -17,6 +17,7 @@ export default function PrepscriptionDetails() {
 
      const [modalVisible, setModalVisible] = useState(false);
      const [address, setaddress] = useState(null);
+     const [addresslist, setaddresslist] = useState([]);
      const { data } = useLocalSearchParams();
      const [addresstype, setaddresstype] = useState('Home');
      const [pdata, setpdata] = useState(null);
@@ -26,7 +27,8 @@ export default function PrepscriptionDetails() {
      const [pin, setpin] = useState(null);
      const [fulladd, setfulladd] = useState(null);
      const [recipt, setrecipt] = useState(null);
-     const [num, setnum] = useState();
+     const [mnumber, setnum] = useState(null);
+     const [user, setuser] = useState('');
 
      const [lmodalVisible, setlModalVisible] = useState(false);
      const [items, setItems] = useState(null);
@@ -63,7 +65,7 @@ export default function PrepscriptionDetails() {
                fullAddress: '789 Maple Ave, Naperville, IL',
                pincode: '60540',
                addressType: 'Parents',
-          },{
+          }, {
                id: 5,
                recipientName: 'Jane Smith',
                phoneNumber: '9876543210',
@@ -97,7 +99,7 @@ export default function PrepscriptionDetails() {
                     .then(v => {
                          if (v === "saved") {
                               setLoading(false)
-                              router.replace('/checkout')
+                              router.replace({ pathname: `/checkout`,params:{selectedAddress:address}})
                          }
                     })
                     .catch(err => console.log(err));
@@ -111,56 +113,93 @@ export default function PrepscriptionDetails() {
                     .then(v => {
                          if (v === "saved") {
                               setLoading(false)
-                              router.replace('/checkout')
+                              router.replace({ pathname: `/checkout`,params:{selectedAddress:address}})
                          }
                     })
                     .catch(err => console.log(err));
           }
 
      }
+     const addAddress = async () => {
+          setLoading(true)
+          console.log(user?.mobile, mnumber, recipt,)
+          try {
 
-
-
-
-
-     const saveaddress = () => {
-          if (!pin) {
-               Alert.alert('Opps', 'please enter a valid details')
-               return
-          } else if (!fulladd) {
-               Alert.alert('Opps', 'please enter a valid details')
-               return
-          } else if (!fulladd) {
-               Alert.alert('Opps', 'please enter a valid details')
-               return
-          }
-          const KEY = 'ADDRESS'
-          var mydata = new Object({ pin: pin, fulladd: fulladd, type: addresstype })
-          console.log(mydata)
-          _storeData(KEY, mydata)
-               .then(m => {
-                    if (m === "saved") {
-                         setModalVisible(false)
-                         setaddress(fulladd + pin + addresstype)
-                    }
-               })
-               .catch(err => console.log(err));
-     }
-     useEffect(() => {
-
-          _retrieveData("ADDRESS").then((userdata) => {
-               console.log(userdata);
-               if (userdata && userdata !== 'error') {
-                    setpin(userdata.pin)
-                    setaddress(userdata.fulladd + ' ' + userdata.pin + ' ' + userdata.type)
-
-               } else {
-
-
+               const add = fulladd + pin
+               let headersList = {
+                    "Accept": "*/*"
                }
 
-          });
+               let bodyContent = new FormData();
+               bodyContent.append("mobileno", user?.mobile);
+               bodyContent.append("usermob",mnumber );
+               bodyContent.append("pname", recipt);
+               bodyContent.append("address", add);
+
+               let response = await fetch(path + "add_address.php", {
+                    method: "POST",
+                    body: bodyContent,
+                    headers: headersList
+               });
+
+               let data = await response.json();
+               if(data.status=== "success"){
+                    ToastAndroid.show(data.message, ToastAndroid.SHORT);
+               }
+
+               console.log(data);
+          } catch (error) {
+
+          } finally {
+               setLoading(false)
+               setModalVisible(false);
+               setrecipt(null)
+               setStatus(null)
+               setpin(null)
+               setfulladd(null)
+               setnum(null)
+
+          }
+     };
+
+     useEffect(() => {
+          _retrieveData("USER_DATA").then((data) => {
+               console.log(data)
+               setuser(data)
+          })
+
      }, [])
+
+
+     const getalladdress = () =>{
+
+     }
+
+
+
+
+     // const saveaddress = () => {
+     //      _retrieveData("USER_DATA").then((data) => {
+     //      if (!pin) {
+     //           Alert.alert('Opps', 'please enter a valid details')
+     //           return
+     //      } else if (!fulladd) {
+     //           Alert.alert('Opps', 'please enter a valid details')
+     //           return
+     //      }else{
+
+     //           if (data) {
+     //                addAddress(num, data.mobile, recipt, fulladd+pin)
+     //           } else {
+
+
+     //           }
+     //      }
+
+     //      })
+
+     // }
+
 
 
 
@@ -209,12 +248,13 @@ export default function PrepscriptionDetails() {
      };
 
      const handleSelectAddress = (address) => {
-          Alert.alert(
-            'Selected Address',
-            `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
-          );
-          setModalVisible(false);
-        };
+          // Alert.alert(
+          //      'Selected Address',
+          //      `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
+          // );
+          setaddress(address)
+          setlModalVisible(false);
+     };
 
 
 
@@ -319,11 +359,10 @@ export default function PrepscriptionDetails() {
                                                   <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
                                                   {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(getTotalPrice().toFixed(2)) - discount}</Text>}
                                              </View> */}
-                                             {address ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
-                                                  <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>
-                                             </View> : <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                                             </View>}
+                                                 {address ? <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{}</Text> : <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>}
+                                             </View> 
                                         </View>
 
                                    </View>
@@ -389,13 +428,7 @@ export default function PrepscriptionDetails() {
                                              <Text style={{ color: '#555', fontFamily: 'novabold', marginLeft: 20, fontSize: responsiveFontSize(2.3) }}>Add Address Details</Text>
                                              <AntDesign onPress={() => setModalVisible(false)} style={{ marginRight: 20, padding: 5 }} size={responsiveScreenFontSize(2.3)} name="close" color={'#555'} />
                                         </View>
-                                        {/* <View style={{ marginVertical: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(10), }}>
-                                        <Entypo size={responsiveFontSize(3)} name="location-pin" color={'#333'} />
-                                        <View style={{ marginLeft: 25, width: '70%', }}>
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>Makal hati mouza</Text>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>Maheshtal </Text>
-                                        </View>
-                                   </View> */}
+
                                         <View style={{ marginTop: 0, borderTopWidth: 1, borderColor: '#ccc', width: '100%', paddingTop: 15 }}>
                                              <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginBottom: 20 }}>
                                                   <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Pincode* </Text>
@@ -410,11 +443,11 @@ export default function PrepscriptionDetails() {
                                              </View>
                                              <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
                                                   <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Recipient's name* </Text>
-                                                  <TextInput value={recipt} onChange={(txt) => setrecipt(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
+                                                  <TextInput value={recipt} onChangeText={(txt) => setrecipt(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
                                              </View>
                                              <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
                                                   <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Phone Number* </Text>
-                                                  <TextInput value={num} onChange={(t) => setnum(t)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
+                                                  <TextInput value={mnumber} onChangeText={(text) => setnum(text)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
                                              </View>
                                              <View style={{ width: '90%', alignSelf: 'center', marginTop: responsiveScreenWidth(5) }}>
                                                   <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Address Type* </Text>
@@ -446,14 +479,18 @@ export default function PrepscriptionDetails() {
                                    width: '70%',
                                    alignSelf: 'center', bottom: 10, position: 'absolute'
                               }}
-                              onPress={saveaddress}
+                              disabled={loading}
+                              onPress={() => { addAddress(mnumber, user.mobile, recipt, fulladd + pin) }}
                          >
 
-                              <Text
+                             {loading ?
+                             
+                             <ActivityIndicator size={'small'} color={'#fff'} />
+                             :<Text
                                    style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
                               >
                                    Save Address
-                              </Text>
+                              </Text>}
                               {/* )} */}
                          </TouchableOpacity>
                     </View>

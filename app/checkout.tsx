@@ -5,10 +5,11 @@ import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth,respo
 
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { _retrieveData,_storeData } from '../local_storage';
 import { path } from '../components/server';
 export default function Checkout() {
+     const {selectedAddress} = useLocalSearchParams()
   const [data, setData] = useState(null)
   const [items, setItems] = useState(null);
   const [pdata, setpdata] = useState(null);
@@ -61,18 +62,9 @@ export default function Checkout() {
     } else if (!fulladd) {
          Alert.alert('Opps', 'please enter a valid details')
          return
-    }
-    const KEY = 'ADDRESS'
-    var mydata = new Object({ pin: pin, fulladd: fulladd, type: addresstype })
-    console.log(mydata)
-    _storeData(KEY, mydata)
-         .then(m => {
-              if (m === "saved") {
-                   setModalVisible(false)
-                   setaddress(fulladd + pin + addresstype)
-              }
-         })
-         .catch(err => console.log(err));
+    } else{
+   setaddress(selectedAddress)
+    }    
 }
 
  const handelPlaceOrder = async () => {
@@ -84,7 +76,7 @@ export default function Checkout() {
   fd.append("mobile", data?.mobile)
   fd.append("order_details", JSON.stringify(m_data))
   fd.append("prescription_id", id)
-  fd.append("address",address )
+  fd.append("address",selectedAddress )
   fd.append("discount",discount )
   fd.append("amount",t )
   fd.append("pdata",JSON.stringify(pdata) )
@@ -207,7 +199,7 @@ const deleteItem = (id) => {
                   </View>
                   <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%',  }}>
                     <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}>{'Address'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold',width:'45%',paddingVertical:5}}>{address}</Text>
+                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold',width:'45%',paddingVertical:5}}>{address.fullAddress+','+address.pincode}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -233,6 +225,7 @@ const deleteItem = (id) => {
             borderRadius: 6,
             width: '40%'
           }}
+          disabled
           onPress={()=>{
                if(items &&(getTotalPrice()-discount)>0){
                     handelPlaceOrder()
@@ -254,92 +247,6 @@ const deleteItem = (id) => {
 
       </View>
 
-      <Modal
-                    animationType="slide"
-                    transparent={true}
-                    visible={modalVisible}
-                    onRequestClose={() => {
-                         Alert.alert('Modal has been closed.');
-                         setModalVisible(!modalVisible);
-                    }}>
-                    <View style={{ flex: 1, backgroundColor: '#000', opacity: .9 }}>
-                         <View style={{ position: 'absolute', bottom: 0, height: responsiveScreenHeight(70), backgroundColor: '#fff', width: '100%' }}>
-                              <View style={{ height: '85%' }}>
-                                   <ScrollView>
-                                        <View style={{ borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(15), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
-
-                                             <Text style={{ color: '#555', fontFamily: 'novabold', marginLeft: 20, fontSize: responsiveFontSize(2.3) }}>Add Address Details</Text>
-                                             <AntDesign onPress={() => setModalVisible(false)} style={{ marginRight: 20, padding: 5 }} size={responsiveScreenFontSize(2.3)} name="close" color={'#555'} />
-                                        </View>
-                                        {/* <View style={{ marginVertical: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(10), }}>
-                                        <Entypo size={responsiveFontSize(3)} name="location-pin" color={'#333'} />
-                                        <View style={{ marginLeft: 25, width: '70%', }}>
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>Makal hati mouza</Text>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>Maheshtal </Text>
-                                        </View>
-                                   </View> */}
-                                        <View style={{ marginTop: 0, borderTopWidth: 1, borderColor: '#ccc', width: '100%', paddingTop: 15 }}>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginBottom: 20 }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Pincode* </Text>
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                                       <TextInput value={pin} onChangeText={(txt) => setpin(txt)} style={{ width: '50%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular' }} />
-                                                       {/* <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2.), marginLeft: 10 }}>Kolkata-West Bengal </Text> */}
-                                                  </View>
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>House number,floor,building name,locality* </Text>
-                                                  <TextInput value={fulladd} onChangeText={(txt) => setfulladd(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Recipient's name* </Text>
-                                                  <TextInput value={recipt} onChange={(txt) => setrecipt(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Phone Number* </Text>
-                                                  <TextInput value={num} onChange={(t) => setnum(t)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Address Type* </Text>
-                                                  <FlatList
-                                                       data={['Home', 'Office', 'Other']}
-                                                       horizontal
-                                                       renderItem={({ item }) =>
-                                                            <TouchableOpacity onPress={() => setaddresstype(item)} style={{ height: 30, width: responsiveScreenWidth(20), borderRadius: 4, borderColor: addresstype == item ? '#000' : '#555', justifyContent: 'center', alignItems: 'center', borderWidth: 1, marginRight: 10, marginTop: 15 }}>
-                                                                 <Text style={{ color: addresstype == item ? '#000' : '#555', fontFamily: addresstype == item ? 'novabold' : 'novaregular' }}>{item}</Text>
-                                                            </TouchableOpacity>
-                                                       }
-
-                                                  />
-                                             </View>
-
-                                        </View>
-                                   </ScrollView>
-                              </View>
-                         </View>
-
-                         <TouchableOpacity
-                              style={{
-                                   height: 50,
-                                   backgroundColor: Colors.primary,
-                                   alignItems: "center",
-                                   justifyContent: "center",
-                                   marginTop: 10,
-                                   borderRadius: 6,
-                                   width: '70%',
-                                   alignSelf: 'center', bottom: 10, position: 'absolute'
-                              }}
-                              onPress={saveaddress}
-                         >
-
-                              <Text
-                                   style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
-                              >
-                                   Save Address
-                              </Text>
-                              {/* )} */}
-                         </TouchableOpacity>
-                    </View>
-               </Modal>
     </View>
   )
 }
