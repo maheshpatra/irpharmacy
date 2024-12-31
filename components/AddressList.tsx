@@ -6,48 +6,23 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import { path } from './server';
 
-const AddressList = ({ visible, onClose, addresses, onSelect }) => {
+const AddressList = ({ visible, onClose, addresses, onSelect,loading }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.addressItem} onPress={() => onSelect(item)}>
-      <Text style={styles.recipient}>{item.recipientName}</Text>
-      <Text style={styles.phone}>Phone: {item.phoneNumber}</Text>
+      <Text style={styles.recipient}>{item.pname}</Text>
+      <Text style={styles.phone}>Phone: {item.usermob}</Text>
       <Text style={styles.address}>
-        {item.fullAddress}, Pincode: {item.pincode}
+        {item.address}
       </Text>
-      <Text style={styles.addressType}>Type: {item.addressType}</Text>
+      
     </TouchableOpacity>
   );
-  const addAddress = async (mobileno, usermob, pname, address) => {
-    try {
-      const response = await fetch(path+'address.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          operation: 'add', 
-          mobileno,
-          usermob,
-          pname,
-          address,
-        }),
-      });
-  
-      const data = await response.json();
-      if (data.status === 'success') {
-        alert(data.message);
-      } else {
-        alert(`Error: ${data.message}`);
-      }
-    } catch (error) {
-      console.error('Error adding address:', error);
-      alert('Failed to add address. Please try again.');
-    }
-  };
+ 
 
   useEffect(()=>{
 
@@ -68,6 +43,9 @@ const AddressList = ({ visible, onClose, addresses, onSelect }) => {
               <Text style={styles.closeButton}>X</Text>
             </TouchableOpacity>
           </View>
+          {loading ? 
+          <ActivityIndicator size={'small'} color={'green'}/>
+          :
           <FlatList
             data={addresses}
             keyExtractor={(item) => item.id.toString()}
@@ -78,6 +56,7 @@ const AddressList = ({ visible, onClose, addresses, onSelect }) => {
               <Text style={styles.emptyText}>No addresses found.</Text>
             }
           />
+}
         </View>
       </View>
     </Modal>

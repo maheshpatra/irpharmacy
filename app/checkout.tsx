@@ -9,7 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { _retrieveData,_storeData } from '../local_storage';
 import { path } from '../components/server';
 export default function Checkout() {
-     const {selectedAddress} = useLocalSearchParams()
+     const params = useLocalSearchParams()
   const [data, setData] = useState(null)
   const [items, setItems] = useState(null);
   const [pdata, setpdata] = useState(null);
@@ -22,6 +22,8 @@ export default function Checkout() {
   const [total, settotal] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [pin, setpin] = useState(null);
+
+  const selectedAddres = params
      const [recipt, setrecipt] = useState(null);
      const [num, setnum] = useState();
   useEffect(() => {
@@ -197,9 +199,9 @@ const deleteItem = (id) => {
                     {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹  {(getTotalPrice()-discount).toFixed(2)}</Text>}
                     {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>} */}
                   </View>
-                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%',  }}>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%',paddingHorizontal:responsiveScreenHeight(2)  }}>
                     <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular' }}>{'Address'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold',width:'45%',paddingVertical:5}}>{address.fullAddress+','+address.pincode}</Text>
+                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold',width:'45%',paddingVertical:5}}>{selectedAddres?.pname+','+ selectedAddres?.address}</Text>
                   </TouchableOpacity>
                 </View>
 

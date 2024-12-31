@@ -99,7 +99,9 @@ export default function PrepscriptionDetails() {
                     .then(v => {
                          if (v === "saved") {
                               setLoading(false)
-                              router.replace({ pathname: `/checkout`,params:{selectedAddress:address}})
+
+                              console.log(address)
+                              router.replace({ pathname: `/checkout`, params: { ...address } })
                          }
                     })
                     .catch(err => console.log(err));
@@ -113,7 +115,8 @@ export default function PrepscriptionDetails() {
                     .then(v => {
                          if (v === "saved") {
                               setLoading(false)
-                              router.replace({ pathname: `/checkout`,params:{selectedAddress:address}})
+                              console.log(address)
+                              router.replace({ pathname: `/checkout`, params: { ...address } })
                          }
                     })
                     .catch(err => console.log(err));
@@ -122,7 +125,7 @@ export default function PrepscriptionDetails() {
      }
      const addAddress = async () => {
           setLoading(true)
-          console.log(user?.mobile, mnumber, recipt,)
+
           try {
 
                const add = fulladd + pin
@@ -132,7 +135,7 @@ export default function PrepscriptionDetails() {
 
                let bodyContent = new FormData();
                bodyContent.append("mobileno", user?.mobile);
-               bodyContent.append("usermob",mnumber );
+               bodyContent.append("usermob", mnumber);
                bodyContent.append("pname", recipt);
                bodyContent.append("address", add);
 
@@ -143,10 +146,10 @@ export default function PrepscriptionDetails() {
                });
 
                let data = await response.json();
-               if(data.status=== "success"){
+               if (data.status === "success") {
                     ToastAndroid.show(data.message, ToastAndroid.SHORT);
                }
-
+               getalladdress(user) 
                console.log(data);
           } catch (error) {
 
@@ -166,14 +169,46 @@ export default function PrepscriptionDetails() {
           _retrieveData("USER_DATA").then((data) => {
                console.log(data)
                setuser(data)
+               getalladdress(data) 
           })
-
+         
      }, [])
 
 
-     const getalladdress = () =>{
+     const getalladdress = async (m_data) => {
+          setLoading(true)
+
+          try {
+               let headersList = {
+                    "Accept": "*/*"
+               }
+
+               let bodyContent = new FormData();
+               bodyContent.append("mobileno", m_data.mobile);
+
+               let response = await fetch(path + "selectaddress.php", {
+                    method: "POST",
+                    body: bodyContent,
+                    headers: headersList
+               });
+
+               let data = await response.json();
+               if (data.status === "success") {
+                    setaddresslist(data.data)
+               }
+               console.log(data);
+          } catch (error) {
+
+          } finally {
+               setLoading(false)
+          }
+
+
+
 
      }
+
+
 
 
 
@@ -247,13 +282,15 @@ export default function PrepscriptionDetails() {
           setItems(items.map(item => item.id === id ? { ...item, qty: item.qty === 1 ? 0 : 1 } : item));
      };
 
-     const handleSelectAddress = (address) => {
+     const handleSelectAddress = (add) => {
           // Alert.alert(
           //      'Selected Address',
           //      `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
           // );
-          setaddress(address)
+         
+          setaddress(add)
           setlModalVisible(false);
+          console.log(add)
      };
 
 
@@ -359,10 +396,10 @@ export default function PrepscriptionDetails() {
                                                   <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
                                                   {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(getTotalPrice().toFixed(2)) - discount}</Text>}
                                              </View> */}
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
+                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
-                                                 {address ? <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{}</Text> : <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>}
-                                             </View> 
+                                                  {address ? <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{address.pname + ', ' + address.address}</Text> : <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>}
+                                             </View>
                                         </View>
 
                                    </View>
@@ -408,8 +445,9 @@ export default function PrepscriptionDetails() {
                <AddressList
                     visible={lmodalVisible}
                     onClose={() => setlModalVisible(false)}
-                    addresses={addresses}
+                    addresses={addresslist}
                     onSelect={handleSelectAddress}
+                    loading={loading}
                />
                <Modal
                     animationType="slide"
@@ -483,14 +521,14 @@ export default function PrepscriptionDetails() {
                               onPress={() => { addAddress(mnumber, user.mobile, recipt, fulladd + pin) }}
                          >
 
-                             {loading ?
-                             
-                             <ActivityIndicator size={'small'} color={'#fff'} />
-                             :<Text
-                                   style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
-                              >
-                                   Save Address
-                              </Text>}
+                              {loading ?
+
+                                   <ActivityIndicator size={'small'} color={'#fff'} />
+                                   : <Text
+                                        style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
+                                   >
+                                        Save Address
+                                   </Text>}
                               {/* )} */}
                          </TouchableOpacity>
                     </View>
