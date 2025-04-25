@@ -8,6 +8,7 @@ import Colors from '../constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import { _retrieveData, _storeData } from '../local_storage';
 import { path } from '../components/server';
+import axios from 'axios';
 export default function Checkout() {
   const params = useLocalSearchParams()
   const [data, setData] = useState(null)
@@ -103,28 +104,37 @@ export default function Checkout() {
       fd.append("pdata", JSON.stringify(pdata));
       fd.append("payment_method", 'cod');
       fd.append("payment_id", '');
-      fd.append("pharld", ''); // pharmacy ID, required in DB
-      fd.append("buyer_id", data?.userid); // logged in user id
-      fd.append("drname", ''); // optional, doctor's name if any
-      fd.append("paymentmode", 'cash'); // or 'qr', etc.
-      fd.append("cashgiven", 0); // amount of cash customer gave
-      fd.append("cashreturn", 0); // change returned
-      fd.append("qrpayment", 0); // QR payment amount
+      fd.append("pharld", ''); 
+      fd.append("buyer_id", data?.userid); 
+      fd.append("drname", ''); 
+      fd.append("paymentmode", 'cash'); 
+      fd.append("cashgiven", '0');
+      fd.append("cashreturn", '0'); 
+      fd.append("qrpayment",'0');
 
-
+      console.log(address)
+      try {
+        const response = await axios.post('https://irhealthcareservice.com/app_api/v1/order.php', fd, {
+          headers: {
+            'Content-Type': 'multipart/form-data'  
+          }
+        });
+        
+       
+        console.log(response);
+      } catch (error) {
+       
+        console.error('Error:', error.response || error.message || error);
+      }
       
-        const req = await fetch("https://irhealthcareservice.com/app_api/order.php", {
-          body: fd,
-          method: 'POST'
-        })
-        const ress = req.json();
-        console.log(fd)
-        setLoading(false)
-        if (ress.error) {
-          Alert.alert('Error ', res.message)
-        } else {
-          router.replace({ pathname: `/orderconfirm`, params: { data: getTotalPrice() - discount } })
-        }
+        
+        // console.log(fd)
+        // setLoading(false)
+        // if (ress.error) {
+        //   Alert.alert('Error ', res.message)
+        // } else {
+        //   router.replace({ pathname: `/orderconfirm`, params: { data: getTotalPrice() - discount } })
+        // }
 
      
 
