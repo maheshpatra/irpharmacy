@@ -2,7 +2,6 @@ import { View, Text, FlatList, Image, TouchableOpacity, Modal, Alert, TextInput,
 import React, { useEffect, useState } from 'react'
 import HeaderAB from '../components/HeaderAB'
 import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions'
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
@@ -13,8 +12,6 @@ import { _retrieveData, _storeData } from '../local_storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import AddressList from '../components/AddressList';
 export default function PrepscriptionDetails() {
-
-
      const [modalVisible, setModalVisible] = useState(false);
      const [address, setaddress] = useState(null);
      const [addresslist, setaddresslist] = useState([]);
@@ -25,60 +22,23 @@ export default function PrepscriptionDetails() {
      const [discount, setDiscount] = useState(0);
      const [image, setimage] = useState(null);
      const [pin, setpin] = useState(null);
+     const [spin, setspin] = useState(null);
      const [fulladd, setfulladd] = useState(null);
      const [recipt, setrecipt] = useState(null);
      const [mnumber, setnum] = useState(null);
      const [user, setuser] = useState('');
-
      const [lmodalVisible, setlModalVisible] = useState(false);
      const [items, setItems] = useState(null);
+     const [sitems, setsItems] = useState(null);
      const [loading, setLoading] = useState(false);
-     const addresses = [
-          {
-               id: 1,
-               recipientName: 'John Doe',
-               phoneNumber: '1234567890',
-               fullAddress: '123 Main St, Springfield, IL',
-               pincode: '62704',
-               addressType: 'Home',
-          },
-          {
-               id: 2,
-               recipientName: 'Jane Smith',
-               phoneNumber: '9876543210',
-               fullAddress: '456 Elm St, Chicago, IL',
-               pincode: '60601',
-               addressType: 'Work',
-          },
-          {
-               id: 3,
-               recipientName: 'Robert Brown',
-               phoneNumber: '5556667777',
-               fullAddress: '789 Maple Ave, Naperville, IL',
-               pincode: '60540',
-               addressType: 'Parents',
-          },
-          {
-               id: 4,
-               recipientName: 'Robert Brown',
-               phoneNumber: '5556667777',
-               fullAddress: '789 Maple Ave, Naperville, IL',
-               pincode: '60540',
-               addressType: 'Parents',
-          }, {
-               id: 5,
-               recipientName: 'Jane Smith',
-               phoneNumber: '9876543210',
-               fullAddress: '456 Elm St, Chicago, IL',
-               pincode: '60601',
-               addressType: 'Work',
-          },
-     ];
+
 
 
      const getmedprice = async () => {
-          const m_data = items.filter(item => item.qty === 1);
-          const mydata = JSON.stringify({ data: m_data, pincode: pin })
+          const m_data = sitems
+               .filter(item => item.id) // ensures only items with a valid id
+               .map(item => ({ id: item.id }));
+          const mydata = JSON.stringify({ data: m_data, pincode: spin })
           let bodyContent = new FormData();
           bodyContent.append("medDetail", mydata);
           bodyContent.append("case", "mediciDetail");
@@ -87,39 +47,32 @@ export default function PrepscriptionDetails() {
                method: "POST",
                body: bodyContent
           });
-
+          
           let data_ = await response.json();
-          console.log(data);
-          if (data_.error) {
+          console.log(data)
+          var my_data = new Object({ medicine: data_, pdata: pdata[0], address: address, pid: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
+          if (!data_.error) {
                const KEY = 'MED'
-
-               // console.log(m_data)
-               var my_data = new Object({ medicine: m_data, pdata: pdata[0], address: address, id: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
                _storeData(KEY, my_data)
                     .then(v => {
                          if (v === "saved") {
                               setLoading(false)
-
-                              console.log(address)
                               router.replace({ pathname: `/checkout`, params: { ...address } })
                          }
                     })
                     .catch(err => console.log(err));
-
           } else {
-               const KEY = 'MED'
 
-               // console.log(m_data)
-               var mdata = new Object({ medicine: data_, pdata: pdata[0], address: address, id: data, discount: discount, total: 0 - discount })
-               _storeData(KEY, mdata)
-                    .then(v => {
-                         if (v === "saved") {
-                              setLoading(false)
-                              console.log(address)
-                              router.replace({ pathname: `/checkout`, params: { ...address } })
-                         }
-                    })
-                    .catch(err => console.log(err));
+
+               Alert.alert(
+                    "⚠️ Medicine Not Available",
+                    "The selected medicine is currently not available for the entered pin code.\n\nPlease check the pin code or try searching for another medicine.",
+                    [
+                         { text: "OK", onPress: () => console.log("User acknowledged alert") }
+                    ],
+                    { cancelable: false }
+               );
+
           }
 
      }
@@ -149,8 +102,7 @@ export default function PrepscriptionDetails() {
                if (data.status === "success") {
                     ToastAndroid.show(data.message, ToastAndroid.SHORT);
                }
-               getalladdress(user) 
-               console.log(data);
+               getalladdress(user)
           } catch (error) {
 
           } finally {
@@ -167,11 +119,10 @@ export default function PrepscriptionDetails() {
 
      useEffect(() => {
           _retrieveData("USER_DATA").then((data) => {
-               console.log(data)
                setuser(data)
-               getalladdress(data) 
+               getalladdress(data)
           })
-         
+
      }, [])
 
 
@@ -196,7 +147,6 @@ export default function PrepscriptionDetails() {
                if (data.status === "success") {
                     setaddresslist(data.data)
                }
-               console.log(data);
           } catch (error) {
 
           } finally {
@@ -208,41 +158,7 @@ export default function PrepscriptionDetails() {
 
      }
 
-
-
-
-
-
-     // const saveaddress = () => {
-     //      _retrieveData("USER_DATA").then((data) => {
-     //      if (!pin) {
-     //           Alert.alert('Opps', 'please enter a valid details')
-     //           return
-     //      } else if (!fulladd) {
-     //           Alert.alert('Opps', 'please enter a valid details')
-     //           return
-     //      }else{
-
-     //           if (data) {
-     //                addAddress(num, data.mobile, recipt, fulladd+pin)
-     //           } else {
-
-
-     //           }
-     //      }
-
-     //      })
-
-     // }
-
-
-
-
-
-
-
      const gotocheckout = () => {
-          console.log()
           getmedprice()
      }
 
@@ -257,9 +173,9 @@ export default function PrepscriptionDetails() {
                     method: 'post'
                })
                const res = await req.json();
-               console.log(res)
 
                setItems(JSON.parse(res.data.medicine_data))
+               setsItems(JSON.parse(res.data.medicine_data))
                setpdata(JSON.parse(res.data.patient_details))
                setStatus(res.data.type)
                setDiscount(res.data.discount)
@@ -279,7 +195,16 @@ export default function PrepscriptionDetails() {
 
 
      const handleCheck = (id) => {
-          setItems(items.map(item => item.id === id ? { ...item, qty: item.qty === 1 ? 0 : 1 } : item));
+          const item = items.find(i => i.id === id);
+          const alreadySelected = sitems?.some(s => s.id === id);
+
+          if (alreadySelected) {
+               // Uncheck → remove from sitems
+               setsItems(prev => prev.filter(i => i.id !== id));
+          } else {
+               // Check → add to sitems
+               setsItems(prev => [...prev, { ...item, qty: 1 }]);
+          }
      };
 
      const handleSelectAddress = (add) => {
@@ -287,10 +212,12 @@ export default function PrepscriptionDetails() {
           //      'Selected Address',
           //      `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
           // );
-         
+          const address = add.address;
+          const match = address.match(/(\d{6})/);
+          const pincode = match ? match[1] : null;
           setaddress(add)
           setlModalVisible(false);
-          console.log(add)
+          setspin(pincode)
      };
 
 
@@ -349,15 +276,21 @@ export default function PrepscriptionDetails() {
 
                                    </View>
                                    <View style={{ width: '15%', height: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }}>
-                                        {item.qty === 0 ? (<MaterialIcons
-                                             onPress={() => handleCheck(item.id)}
-                                             size={responsiveFontSize(3.5)} name="check-box-outline-blank" color={'#367F52'} />)
-                                             :
-                                             (<MaterialIcons
+                                        {sitems?.some(i => i.id === item.id) ? (
+                                             <MaterialIcons
                                                   onPress={() => handleCheck(item.id)}
-                                                  size={responsiveFontSize(3.5)} name="check-box" color={'#367F52'} />)
-
-                                        }
+                                                  size={responsiveFontSize(3.5)}
+                                                  name="check-box"
+                                                  color={'#367F52'}
+                                             />
+                                        ) : (
+                                             <MaterialIcons
+                                                  onPress={() => handleCheck(item.id)}
+                                                  size={responsiveFontSize(3.5)}
+                                                  name="check-box-outline-blank"
+                                                  color={'#367F52'}
+                                             />
+                                        )}
                                    </View>
                                    {/* <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
                                         {item.qty > 1 ? (
