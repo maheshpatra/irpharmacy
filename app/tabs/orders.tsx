@@ -32,36 +32,63 @@ export default function Orders() {
     });
   }, [])
 
-  const getorders = async () => {
-    setLoading(true)
-    const fd = new FormData();
-    fd.append("mobile", data?.mobile)
-    fd.append("case", 'get_orders')
-    try {
-      const req = await fetch(path + "order.php", {
-        body: fd,
-        method: 'post'
-      })
-      const res = await req.json();
-      console.log(res)
-      
-      setOrders(res.data)
-      setLoading(false)
-    } catch (err) {
-      console.log(JSON.stringify(err, null, 2));
+  const getOrders = useCallback(async () => {
+    // 0. Ensure we have a mobile to query
+    const mobile = data?.mobile;
+    if (!mobile) {
+      return;
     }
-  }
-
+  
+    setLoading(true);
+    try {
+      // 1. Build JSON payload
+      const payload = {
+        case: 'get_orders_by_mobile',
+        mobile,
+      };
+     console.log(payload)
+      // 2. Fire the request
+      const response = await fetch(`${path}/v1/order.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+  
+      // 3. HTTP‐level error?
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+  
+      // 4. Parse JSON
+      const res = await response.json();
+      console.log('getOrders response:', res);
+  
+      // 5. API‐level error?
+      if (res.error) {
+        throw new Error(res.message || 'Unknown server error');
+      }
+  
+      // 6. Set state (fall back to empty array)
+      setOrders(Array.isArray(res.orders) ? res.orders : []);
+    } catch (err) {
+      console.error('Fetch orders error:', err);
+      Alert.alert('Error fetching orders', err.message);
+    } finally {
+      // 7. Always clear loading
+      setLoading(false);
+    }
+  }, [data?.mobile]);
+  
   useFocusEffect(
     useCallback(() => {
-      getorders()
+      getOrders()
       return () => {
       }
     }, [data])
   )
 
   useEffect(()=>{
-    getorders()
+    getOrders()
   },[data])
   return (
     <View style={{flex:1,backgroundColor:'#fff'}}>
@@ -83,7 +110,7 @@ export default function Orders() {
             </TouchableOpacity>
           }
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={getorders} />
+            <RefreshControl refreshing={loading} onRefresh={getOrders} />
           }
         />:
         <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>

@@ -10,7 +10,10 @@ import { router, useLocalSearchParams } from 'expo-router'
 
 export default function OrderConfirm() {
 
-  const {data} = useLocalSearchParams();
+  const { total, order_id } = useLocalSearchParams<{
+    total: string;
+    order_id: string;
+  }>();
   return (
     <View style={{flex:1,backgroundColor:'#fff'}}>
         <StatusBar backgroundColor='#fff' />
@@ -32,14 +35,14 @@ export default function OrderConfirm() {
         // Button Linear Gradient
         colors={['#cce9a2', '#fff',]}
         style={{height:responsiveScreenWidth(12),borderTopLeftRadius:10,borderTopRightRadius:10,flexDirection:'row',alignItems:'center'}}>
-          <Text style={{padding:2,backgroundColor:'green',color:'#fff',paddingHorizontal:4,borderRadius:8,marginLeft:10}}>Processing</Text>
-          <Text style={{color:'#555',marginHorizontal:10,fontWeight:'bold',fontSize:responsiveFontSize(1.8)}}>Excepted Delivery on 05 June</Text>
+          <Text style={{padding:2,backgroundColor:'green',color:'#fff',paddingHorizontal:4,borderRadius:8,marginLeft:10,fontFamily:'novabold'}}>Processing</Text>
+          <Text style={{color:'#555',marginHorizontal:10,fontWeight:'bold',fontSize:responsiveFontSize(1.8)}}>Your Order Id {order_id}</Text>
           <AntDesign size={responsiveScreenFontSize(2)} name="right" color={'#555'} />
         {/* <Text style={styles.text}>Sign in with Facebook</Text> */}
       </LinearGradient>
       <View style={{width:'100%',height:responsiveScreenWidth(32),alignItems:'center',flexDirection:'row',justifyContent:'space-between',paddingHorizontal:responsiveScreenWidth(2)}}>
       <Image resizeMode='stretch' style={{height:responsiveScreenWidth(15),width:responsiveScreenWidth(15),marginLeft:15,borderWidth:1,borderColor:'#ccc',borderRadius:10,padding:5}} source={require('../assets/images/homepage-con.png')} />
-      {data && <Text style={{color:'#555',fontWeight:'bold',fontSize:responsiveFontSize(4),marginRight:10}}>₹ {data}</Text>}
+      {total && <Text style={{color:'#000',fontWeight:'bold',fontSize:responsiveFontSize(4),marginRight:10}}>₹ {total}</Text>}
            
       </View>
 

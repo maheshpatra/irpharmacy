@@ -45,7 +45,7 @@ export default function OrderDetails() {
        
        setItems(JSON.parse(res.data.order_details))
        setpdata(JSON.parse(res.data.p_data))
-       setStatus(res.data.status)
+       setStatus(res.data.order_status)
        setDiscount(res.data.discount)
        setaddress(res.data.address)
        setMydata(res.data)
@@ -145,6 +145,21 @@ export default function OrderDetails() {
                                                   <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>Bill total</Text>
                                                  {items && <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>₹ {mydata?.amount}</Text>}
                                              </View>
+                                             {mydata?.payment_status === "Paid" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Order Type</Text>
+                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular'}}>Prepaid</Text>}
+                                             </View>}
+                                             {mydata?.payment_status === "Paid" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Total Amount Paid </Text>
+                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novabold',color:'green'}}>₹ {mydata?.amount}</Text>}
+                                             </View>}
+                                             {mydata?.onlinepayid !== "" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Payment Id</Text>
+                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular'}}>{mydata?.onlinepayid}</Text>}
+                                             </View>}
                                              {address &&<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
                                                   <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Address'}</Text>
                                                   <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold', }}>{address}</Text>

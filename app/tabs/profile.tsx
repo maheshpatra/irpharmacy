@@ -2,18 +2,39 @@ import { View, Image, Text, FlatList, TouchableOpacity, Alert } from 'react-nati
 import React, { useEffect, useState } from 'react'
 import Header from '../../components/Header'
 import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenWidth } from 'react-native-responsive-dimensions'
-import { _retrieveData, _removeData } from "../../local_storage";
+import { _retrieveData, _removeData, _storeData } from "../../local_storage";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import EmailUpdate from '../../components/EmailUpdate';
+import NameUpdate from '../../components/NameUpdate';
 
 export default function profile() {
 
   const [data, setData] = useState(null)
   const [isPopupVisible, setPopupVisible] = useState(false);
-  const handleUpdateEmail = (email) => {
+  const [isPopupVisiblen, setPopupVisiblen] = useState(false);
+  const handleUpdateEmail = async (email) => {
     console.log('Updated Email:', email);
+
+    if (data) {
+      const updatedUser = { ...data, email };
+      setData(updatedUser); // Update state
+      await _storeData('USER_DATA', updatedUser); // Save to AsyncStorage
+    } else {
+      Alert.alert('Error', 'User data not available.');
+    }
+  };
+  const handleUpdatename = async (username:String) => {
+    console.log('Updated Email:', username);
+
+    if (data) {
+      const updatedUser = { ...data, username };
+      setData(updatedUser); // Update state
+      await _storeData('USER_DATA', updatedUser); // Save to AsyncStorage
+    } else {
+      Alert.alert('Error', 'User data not available.');
+    }
   };
   useEffect(() => {
 
@@ -42,8 +63,9 @@ export default function profile() {
         <View style={{ marginLeft: 25, width: '70%', }}>
           <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2.2), color: '#333', }}>Name</Text>
           <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: 'green', }}>{data?.username}</Text>
-
+          
         </View>
+        <Feather onPress={() => setPopupVisiblen(true)} style={{padding:2}} name='edit-3' size={responsiveFontSize(2.5)} color={'#333'} />
 
       </View>
       <View style={{ marginTop: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(12) }}>
@@ -69,6 +91,11 @@ export default function profile() {
         visible={isPopupVisible}
         onClose={() => setPopupVisible(false)}
         onUpdate={handleUpdateEmail}
+      />
+      <NameUpdate
+        visible={isPopupVisiblen}
+        onClose={() => setPopupVisiblen(false)}
+        onUpdate={handleUpdatename}
       />
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',width:'85%',alignSelf:'center',marginTop:'15%'}}> 
       <TouchableOpacity style={{ flexDirection: 'row', width: '48%', alignSelf: 'center', height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 6, borderWidth: 1, borderColor: '#333', marginTop: 10 }}>
