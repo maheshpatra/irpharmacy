@@ -91,7 +91,7 @@ const Home = () => {
                 <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>Order with Prepscription</Text>
                 <Image resizeMode='cover' style={{ height: responsiveScreenWidth(10.5), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-con.png')} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL(`tel:${'8167553353'}`)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
+              <TouchableOpacity onPress={() => Linking.openURL(`tel:${'9800424058'}`)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f6f9', height: '75%', width: '47%', borderRadius: 12, justifyContent: 'space-between', paddingHorizontal: 10 }}>
                 <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#000' }}>Call to order Medicines</Text>
                 <Image resizeMode='cover' style={{ height: responsiveScreenWidth(10.5), width: responsiveScreenWidth(9) }} source={require('../../assets/images/homepage-cicon-2.png')} />
               </TouchableOpacity>
