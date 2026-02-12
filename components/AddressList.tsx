@@ -9,9 +9,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
-import { path } from './server';
 
-const AddressList = ({ visible, onClose, addresses, onSelect,loading }) => {
+
+const AddressList = ({ visible, onClose, addresses, onSelect, loading }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.addressItem} onPress={() => onSelect(item)}>
       <Text style={styles.recipient}>{item.pname}</Text>
@@ -19,14 +19,14 @@ const AddressList = ({ visible, onClose, addresses, onSelect,loading }) => {
       <Text style={styles.address}>
         {item.address}
       </Text>
-      
+
     </TouchableOpacity>
   );
- 
 
-  useEffect(()=>{
 
-  },[])
+  useEffect(() => {
+
+  }, [])
 
   return (
     <Modal
@@ -43,20 +43,20 @@ const AddressList = ({ visible, onClose, addresses, onSelect,loading }) => {
               <Text style={styles.closeButton}>X</Text>
             </TouchableOpacity>
           </View>
-          {loading ? 
-          <ActivityIndicator size={'small'} color={'green'}/>
-          :
-          <FlatList
-            data={addresses}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No addresses found.</Text>
-            }
-          />
-}
+          {loading ?
+            <ActivityIndicator size={'small'} color={'green'} />
+            :
+            <FlatList
+              data={addresses}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContainer}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No addresses found.</Text>
+              }
+            />
+          }
         </View>
       </View>
     </Modal>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     fontSize: responsiveFontSize(2),
-    fontFamily:'novabold',
+    fontFamily: 'novabold',
     color: 'green',
   },
   listContainer: {
@@ -110,25 +110,25 @@ const styles = StyleSheet.create({
   },
   recipient: {
     fontSize: 16,
-    fontFamily:'novabold',
+    fontFamily: 'novabold',
   },
   phone: {
     fontSize: 14,
     color: '#555',
-    fontFamily:'novaregular',
+    fontFamily: 'novaregular',
     marginVertical: 3,
   },
   address: {
     fontSize: 14,
     color: '#333',
     marginVertical: 3,
-    fontFamily:'novaregular'
+    fontFamily: 'novaregular'
   },
   addressType: {
     fontSize: 13,
     color: '#888',
     marginTop: 3,
-    fontFamily:'novaregular'
+    fontFamily: 'novaregular'
   },
   emptyText: {
     textAlign: 'center',

@@ -8,78 +8,76 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
 import { ScrollView } from 'react-native-gesture-handler';
 import { router, useLocalSearchParams } from 'expo-router';
-import { path } from '../components/server';
+import axios from '../helper';
 import { _storeData } from '../local_storage';
 export default function OrderDetails() {
 
 
      const [modalVisible, setModalVisible] = useState(false);
      const [address, setaddress] = useState(null);
-     const {data} = useLocalSearchParams();
+     const { data } = useLocalSearchParams();
      const [addresstype, setaddresstype] = useState('Home');
      const [pdata, setpdata] = useState(null);
      const [status, setStatus] = useState(null);
      const [discount, setDiscount] = useState(0);
      const [image, setimage] = useState(null);
-     
-    
-        const [items, setItems] = useState(null);
-        const [loading, setLoading] = useState(false);
-        const [mydata, setMydata] = useState(null);
-       
-       
-      
-     
-    const getorder = async () => {
-     setLoading(true)
-     const fd = new FormData();
-     fd.append("id", data)
-     fd.append("case", 'get_order_byid')
-     try {
-       const req = await fetch(path + "order.php", {
-         body: fd,
-         method: 'post'
-       })
-       const res = await req.json();
-       console.log(res)
-       
-       setItems(JSON.parse(res.data.order_details))
-       setpdata(JSON.parse(res.data.p_data))
-       setStatus(res.data.order_status)
-       setDiscount(res.data.discount)
-       setaddress(res.data.address)
-       setMydata(res.data)
 
-       setLoading(false)
-     } catch (err) {
-       console.log(JSON.stringify(err, null, 2));
+
+     const [items, setItems] = useState(null);
+     const [loading, setLoading] = useState(false);
+     const [mydata, setMydata] = useState(null);
+
+
+
+
+     const getorder = async () => {
+          setLoading(true)
+          const fd = new FormData();
+          fd.append("id", data)
+          fd.append("case", 'get_order_byid')
+          try {
+               const { data: res } = await axios.post("order/order.php", fd, {
+                    headers: { "Content-Type": "multipart/form-data" }
+               });
+               console.log(res)
+
+               setItems(JSON.parse(res.data.order_details))
+               setpdata(JSON.parse(res.data.p_data))
+               setStatus(res.data.order_status)
+               setDiscount(res.data.discount)
+               setaddress(res.data.address)
+               setMydata(res.data)
+
+               setLoading(false)
+          } catch (err) {
+               console.log(JSON.stringify(err, null, 2));
+          }
      }
-   }
- 
-   useEffect(()=>{
-     getorder()
-   },[data])
+
+     useEffect(() => {
+          getorder()
+     }, [data])
 
 
 
-  const increaseQuantity = (id) => {
-    setItems(items.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item));
-  };
+     const increaseQuantity = (id) => {
+          setItems(items.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item));
+     };
 
-  const decreaseQuantity = (id) => {
-    setItems(items.map(item => item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item));
-  };
-  const getTotalPrice = () => {
-     return items.reduce((total, item) => total + Number(item.price?item.price:0) * item.qty, 0);
-   };
+     const decreaseQuantity = (id) => {
+          setItems(items.map(item => item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item));
+     };
+     const getTotalPrice = () => {
+          return items.reduce((total, item) => total + Number(item.price ? item.price : 0) * item.qty, 0);
+     };
 
-   function percentage(percent, total) {
-     return ((percent/ 100) * total).toFixed(2)
- }
+     function percentage(percent, total) {
+          return ((percent / 100) * total).toFixed(2)
+     }
      return (
           <View style={{ flex: 1, backgroundColor: '#fff' }}>
                <HeaderAB title={'Order Details'} />
-               {status &&<Text style={{ alignSelf: 'center', color: 'green', fontFamily: 'novabold' }}>{status} Order</Text>}
+               {status && <Text style={{ alignSelf: 'center', color: 'green', fontFamily: 'novabold' }}>{status} Order</Text>}
                <View style={{ height: responsiveScreenHeight(80) }}>
                     <FlatList
                          data={items}
@@ -100,24 +98,24 @@ export default function OrderDetails() {
                               </View>
 
                          }
-                         renderItem={({item,index}) =>
+                         renderItem={({ item, index }) =>
 
                               <View style={{ width: '95%', alignSelf: 'center', height: responsiveScreenWidth(22), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
                                    <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
                                    <View style={{ marginLeft: 10, height: '70%', justifyContent: 'space-between', width: '40%', marginRight: 15 }}>
-                                        <Text numberOfLines={1} style={{fontFamily:'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
-                                        <Text numberOfLines={1} style={{fontFamily:'novaregular'}}>{item.desc}</Text>
-                                       
+                                        <Text numberOfLines={1} style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
+                                        <Text numberOfLines={1} style={{ fontFamily: 'novaregular' }}>{item.desc}</Text>
 
-                                             <Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ "+item.price}</Text>
-                                             {/* <Text style={{fontFamily:'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ "+item.original_price}</Text> */}
-                                           
-                                        
+
+                                        <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ " + item.price}</Text>
+                                        {/* <Text style={{fontFamily:'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ "+item.original_price}</Text> */}
+
+
 
                                    </View>
-                                   <View style={{ width: '20%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,}}>
+                                   <View style={{ width: '20%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, }}>
                                         {/* <AntDesign  size={responsiveFontSize(2.5)} name="minus" color={'#367F52'} /> */}
-                                        <Text style={{ fontFamily:'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
+                                        <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
                                         {/* <AntDesign  size={responsiveFontSize(2.5)} name="plus" color={'#367F52'} /> */}
                                    </View>
                               </View>
@@ -126,48 +124,48 @@ export default function OrderDetails() {
                               <View>
                                    <View style={{ borderTopWidth: 2, borderColor: '#ddd', marginTop: 20, paddingBottom: 2 }}>
                                         <View style={{ width: '90%', alignSelf: 'center' }}>
-                                             <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2),fontFamily:'novabold' }}>Bill summary</Text>
+                                             <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text>
 
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Item total'}</Text>
-                                                  {items &&<Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Item total'}</Text>
+                                                  {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
                                              </View>
                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Shipping fee'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'free'}</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Shipping fee'}</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'free'}</Text>
                                              </View>
-                                           {items&&  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Total Discount'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{ mydata?.discount }</Text>
+                                             {items && <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Total Discount'}</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{mydata?.discount}</Text>
                                              </View>}
                                              <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                                                  <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>Bill total</Text>
-                                                 {items && <Text style={{ fontSize: responsiveFontSize(2.2),fontFamily:'novabold', }}>₹ {mydata?.amount}</Text>}
+                                                  <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
+                                                  {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {mydata?.amount}</Text>}
                                              </View>
                                              {mydata?.payment_status === "Paid" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Order Type</Text>
-                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular'}}>Prepaid</Text>}
+                                                  <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>Order Type</Text>
+                                                  {items && <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>Prepaid</Text>}
                                              </View>}
                                              {mydata?.payment_status === "Paid" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Total Amount Paid </Text>
-                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novabold',color:'green'}}>₹ {mydata?.amount}</Text>}
+                                                  <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>Total Amount Paid </Text>
+                                                  {items && <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novabold', color: 'green' }}>₹ {mydata?.amount}</Text>}
                                              </View>}
                                              {mydata?.onlinepayid !== "" && <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                                                  <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>Payment Id</Text>
-                                                 {items && <Text style={{ fontSize: responsiveFontSize(2),fontFamily:'novaregular'}}>{mydata?.onlinepayid}</Text>}
+                                                  <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>Payment Id</Text>
+                                                  {items && <Text style={{ fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{mydata?.onlinepayid}</Text>}
                                              </View>}
-                                             {address &&<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                                                  <Text style={{ color: '#555', fontSize: responsiveFontSize(2),fontFamily:'novaregular', }}>{'Address'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily:'novabold', }}>{address}</Text>
-                                             </View> }
+                                             {address && <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
+                                                  <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Address'}</Text>
+                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', }}>{address}</Text>
+                                             </View>}
                                         </View>
 
                                    </View>
-                                   
+
                               </View>
                          }
                     />
@@ -202,7 +200,7 @@ export default function OrderDetails() {
 
 
                </View>  */}
-               
+
           </View>
      )
 }

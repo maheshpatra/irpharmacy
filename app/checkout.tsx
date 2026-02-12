@@ -7,8 +7,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import { _retrieveData, _storeData } from '../local_storage';
-import { path } from '../components/server';
-import axios from 'axios';
+
+import axios from '../helper';
 export default function Checkout() {
   const params = useLocalSearchParams()
   const [data, setData] = useState(null)
@@ -132,7 +132,7 @@ export default function Checkout() {
 
       // 4. Fire the request
       const { data: res } = await axios.post(
-        'https://irhealthcareservice.com/app_api/v1/order.php',
+        'order/order.php',
         payload,
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -178,18 +178,16 @@ export default function Checkout() {
     const sit = selectedItems.map(item => item.id)
     console.log(sit)
     try {
-      const response = await fetch('https://irhealthcareservice.com/app_api/check_stock.php', {
-        method: 'POST',
+      const { data } = await axios.post('medicine/check_stock.php', {
+        selectedItems: selectedItems.map(item => item.id),
+        pincode: pincode,
+      }, {
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          selectedItems: selectedItems.map(item => item.id),
-          pincode: pincode,
-        }),
+        }
       });
 
-      const data = await response.json();
+
       console.log(data)
       // if (Array.isArray(data)) {
       //   const updatedItems = selectedItems.map(item => {
@@ -259,7 +257,7 @@ export default function Checkout() {
 
       // 4. Fire the request
       const { data: res } = await axios.post(
-        'https://irhealthcareservice.com/app_api/v1/order.php',
+        'order/order.php',
         payload,
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -268,7 +266,7 @@ export default function Checkout() {
 
 
       if (!res.error) {
-        const total =getFinal().toFixed(2);
+        const total = getFinal().toFixed(2);
         const orderId = res.order_id;
 
         router.replace({

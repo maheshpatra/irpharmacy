@@ -2,7 +2,7 @@ import { router, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, FlatList, TouchableOpacity, ProgressBarAndroid, Image, Text, ActivityIndicator } from "react-native";
 import { Colors } from "react-native/Libraries/NewAppScreen";
-import { path } from "./server";
+import axios from "../helper";
 import { getpercent } from "../utils";
 
 const StateComp = ({ item }) => {
@@ -21,14 +21,10 @@ const StateComp = ({ item }) => {
             "User-Agent": "Thunder Client (https://www.thunderclient.com)",
         };
         try {
-            let response = await fetch(
-                path + "subject.php?case=findbysub&id=" + id,
-                {
-                    method: "GET",
-                    headers: headersList,
-                }
-            );
-            let data = await response.json();
+            let response = await axios.get("subject.php?case=findbysub&id=" + id, {
+                headers: headersList,
+            });
+            let data = response.data;
             setSub(data);
             setLoading(false);
             console.log(data);
@@ -43,12 +39,12 @@ const StateComp = ({ item }) => {
 
     return (
         <View style={{ flex: 1 }}>
-            {!loading ?<FlatList
+            {!loading ? <FlatList
                 data={sub}
                 renderItem={({ item }) => {
                     return (
                         <TouchableOpacity
-                            onPress={() => router.push({ pathname: `/zone`, params: { item:item.name } })}
+                            onPress={() => router.push({ pathname: `/zone`, params: { item: item.name } })}
                             style={{
                                 width: "100%",
                                 flexDirection: "row",
@@ -80,7 +76,7 @@ const StateComp = ({ item }) => {
                                     styleAttr="Horizontal"
                                     color={Colors.backgroundcolor}
                                     indeterminate={false}
-                                    progress={getpercent(100,20)}
+                                    progress={getpercent(100, 20)}
                                 />
                                 <View
                                     style={{
@@ -106,9 +102,9 @@ const StateComp = ({ item }) => {
                         </TouchableOpacity>
                     );
                 }}
-            />:
-            <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator size={'large'} color={Colors.primary} /></View>
-        }
+            /> :
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size={'large'} color={Colors.primary} /></View>
+            }
         </View>
     );
 };

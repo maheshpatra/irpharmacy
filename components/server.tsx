@@ -1,1 +1,1 @@
-export const path='https://irhealthcareservice.com/app_api/'
+export const path = 'https://irhealthcareservice.com/app_api/v2/';

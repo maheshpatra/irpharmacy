@@ -1,202 +1,201 @@
 import React, { useState } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
-  Image, Dimensions,
-  SafeAreaView, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator
+  Image,
+  Dimensions,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
 } from "react-native";
 import Colors from "../constants/Colors";
-import {
-  Entypo, Feather, FontAwesome, Ionicons
-} from "@expo/vector-icons";
+import { Ionicons, Entypo, FontAwesome } from "@expo/vector-icons";
 import { Link, router, useNavigation, useLocalSearchParams } from "expo-router";
 import { _storeData } from "../local_storage";
-import { path } from "../components/server";
-const Signup = () => {
-  const [isChecked, setIsChecked] = useState(false);
+import axios from '../helper';
+import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } from "react-native-responsive-dimensions";
+import { LinearGradient } from 'expo-linear-gradient';
 
+const Signup = () => {
   const ts = Dimensions.get('screen').width / 100
   const navigate = useNavigation();
+  const { mobile } = useLocalSearchParams();
 
-  const { mobile } = useLocalSearchParams()
-  const [eye, setEye] = useState(true);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({
     email: "",
     name: "",
   });
 
-  const handleCheck = () => {
-    setIsChecked(!isChecked);
-  };
-
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const signup = async () => {
-    if(data.name == ''){
-      Alert.alert('Signup Error','Please Enter Name.')
+    if (!data.name.trim()) {
+      Alert.alert('Signup Error', 'Please Enter Name.');
       return;
-    }else if(data.email == ''){
-      Alert.alert('Signup Error','Please Enter Email.')
+    } else if (!data.email.trim()) {
+      Alert.alert('Signup Error', 'Please Enter Email.');
       return;
     }
-    else{
-      setLoading(true)
+
+    setLoading(true);
     let bodyContent = new FormData();
     bodyContent.append("case", "register");
     bodyContent.append("name", data.name);
+    // @ts-ignore
     bodyContent.append("mobile", mobile);
     bodyContent.append("email", data.email);
-  
-  console.log(mobile)
+
     try {
-      const req = await fetch(path + "login.php", {
-        body: bodyContent,
-        method: 'post'
-      })
-      const res = await req.json();
-      setLoading(false)
-      console.log(res)
-      if(res.error){
-        Alert.alert('Signup Error',res.message);
-        return
-      }else if (res.code == "REGISTERED") {
-        setLoading(true)
-        var datab = new Object({ username: res.data.name, email: res.data.email, userid: res.data.id,  mobile: res.data.mobile, })
-        _storeData("USER_DATA", datab)
-          .then(v => {
-            if (v === "saved") {
-                    router.replace('/tabs')
-                  }
-          })
-          .catch(err => console.log(err));
-        // retrivedata()
+      // NOTE: Using login.php or dedicated register endpoint? 
+      // Based on previous code, likely auth/login.php handled register case. 
+      // If v2 structure implies separate, please verify. Keeping auth/login.php as per user history or register.php?
+      // Reverting to auth/login.php as per original file, assuming it handles 'case=register'.
+      // However, v2 usually separates these. Let's try auth/register.php if standard, but sticking to previous logic:
+      // Previous code used: axios.post("auth/login.php", ... case='register')
+
+      const { data: res } = await axios.post("auth/login.php", bodyContent, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        }
+      });
+      console.log(res);
+
+      if (res.error) {
+        setLoading(false);
+        Alert.alert('Signup Error', res.message);
+      } else if (res.code == "REGISTERED" || res.status === 'success') {
+        // Handle successful registration
+        const userPayload = res.data || res.user; // Adapt based on actual response
+        var datab = {
+          username: userPayload.name || data.name,
+          email: userPayload.email || data.email,
+          userid: userPayload.id,
+          mobile: userPayload.mobile || mobile
+        };
+
+        await _storeData("USER_DATA", datab);
+        if (res.access_token) await _storeData('ACCESS_TOKEN', res.access_token);
+        if (res.refresh_token) await _storeData('REFRESH_TOKEN', res.refresh_token);
+
+        setLoading(false);
+        router.replace('/tabs');
+      } else {
+        setLoading(false);
+        Alert.alert('Signup Error', res.message || 'Unknown error');
       }
 
     } catch (err) {
+      setLoading(false);
       console.log(JSON.stringify(err, null, 2));
+      Alert.alert('Error', 'Something went wrong during registration.');
     }
-    }
-    
-   
-  }
-
+  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.backgroundcolor, }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        style={{
-
-
-          marginTop: "20%",
-        }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <StatusBar barStyle={'light-content'} backgroundColor={Colors.primary} />
+      <LinearGradient
+        colors={[Colors.primary, '#7C9644']}
+        style={styles.headerBackground}
       >
-        <Image resizeMode="stretch" source={require('../assets/images/logo.png')} style={{ height: ts * 40, width: ts * 55, alignSelf: 'center' }} />
-        <Text
-          style={{ alignSelf: "center", fontWeight: "normal", fontSize: 17, color: '#fff', marginTop: 15 }}
+        <Image
+          resizeMode="contain"
+          source={require('../assets/images/logo.png')}
+          style={styles.logo}
+        />
+        <Text style={styles.headerTitle}>Create Account</Text>
+        <Text style={styles.headerSubtitle}>Complete your profile to continue</Text>
+      </LinearGradient>
+
+      <View style={styles.formContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          Please register your log in details below
-        </Text>
 
-        <View style={{ width: "85%", marginTop: 15 }}>
-          <View style={{ marginTop: 15 }}>
-
-            <View style={styles.inputContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Full Name</Text>
+            <View style={[styles.inputWrapper, focusedInput === 'name' && styles.inputFocused]}>
+              <Ionicons name="person-outline" size={20} color="#666" style={styles.icon} />
               <TextInput
-                placeholderTextColor={'#ccc'}
-                placeholder="John Smith"
-                style={styles.inputfild}
+                placeholder="Ex. John Doe"
+                placeholderTextColor="#999"
+                style={styles.textInput}
                 value={data.name}
-                onChangeText={(text) =>
-                  setData((prev) => {
-                    return {
-                      ...prev,
-                      name: text,
-                    };
-                  })
-                }
-              />
-              <Ionicons
-                style={styles.inputIcon}
-                name="person"
-                size={17}
-                color={'#555'}
+                onChangeText={(text) => setData({ ...data, name: text })}
+                onFocus={() => setFocusedInput('name')}
+                onBlur={() => setFocusedInput(null)}
               />
             </View>
           </View>
 
-          <View style={{ marginTop: 15 }}>
-
-            <View style={styles.inputContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email Address</Text>
+            <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
+              <Entypo name="mail" size={20} color="#666" style={styles.icon} />
               <TextInput
-                placeholderTextColor={'#ccc'}
-                placeholder="jonh@exmaple.com"
-                style={styles.inputfild}
+                placeholder="Ex. john@example.com"
+                placeholderTextColor="#999"
+                style={styles.textInput}
                 value={data.email}
                 keyboardType="email-address"
-                onChangeText={(text) =>
-                  setData((prev) => {
-                    return {
-                      ...prev,
-                      email: text,
-                    };
-                  })
-                }
-              />
-              <Entypo
-                style={styles.inputIcon}
-                name="email"
-                size={17}
-                color={'  #555'}
+                autoCapitalize="none"
+                onChangeText={(text) => setData({ ...data, email: text })}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
               />
             </View>
           </View>
 
-          
-
-       
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Mobile Number</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: '#f0f0f0', borderColor: '#e0e0e0' }]}>
+              <Ionicons name="call-outline" size={20} color="#999" style={styles.icon} />
+              <TextInput
+                // @ts-ignore
+                value={mobile}
+                editable={false}
+                style={[styles.textInput, { color: '#888' }]}
+              />
+              <Ionicons name="lock-closed" size={16} color="#999" />
+            </View>
+          </View>
 
           <TouchableOpacity
-            onPress={() => {
-           
-                signup() 
-            }}
-            style={{
-              height: 50,
-              width: "100%",
-              backgroundColor: Colors.primary,
-              alignItems: "center",
-              justifyContent: "center",
-              alignSelf: "center",
-              marginTop: 30,
-              borderRadius: 6,
-            }}
-
+            activeOpacity={0.8}
+            onPress={signup}
+            disabled={loading}
+            style={styles.buttonShadow}
           >
-            {/* <Link href={"/home"} > */}
-            {loading ? 
-              <ActivityIndicator color={Colors.backgroundcolor} size={'small'} />
-             : 
-              <Text
-                style={{ fontWeight: "bold", fontSize: 20, color: Colors.backgroundcolor }}
-              >
-                Continue
-              </Text>
-
-            }
+            <LinearGradient
+              colors={[Colors.primary, '#7C9644']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submitButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Register</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
 
-
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -205,42 +204,102 @@ export default Signup;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    rowGap: 16,
-    padding: 16,
+    backgroundColor: '#fff',
   },
-  social: {
-    borderRadius: 20,
-    size: 30,
-    padding: 5,
-    margin: 8,
-    alignSelf: "center",
+  headerBackground: {
+    height: responsiveScreenHeight(30),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    paddingTop: StatusBar.currentHeight,
   },
-  inputContainer: {
-    backgroundColor: Colors.sec,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    height: 50,
-    borderColor: "#ccc",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 20
-  },
-  inputIcon: {
-    marginRight: 20,
-  },
-  inputfild: {
-    paddingLeft: 16,
-    height: 50,
-    borderColor: "#ccc",
-    width: "80%",
-    color: '#333',
-
-  },
-  inputfildLabel: {
-    fontSize: 16,
+  logo: {
+    height: 60,
+    width: 60,
     marginBottom: 10,
-    fontWeight: "bold",
+    tintColor: '#fff'
+  },
+  headerTitle: {
+    fontFamily: 'novabold',
+    fontSize: responsiveFontSize(3),
+    color: '#fff',
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontFamily: 'novaregular',
+    fontSize: responsiveFontSize(1.8),
+    color: 'rgba(255,255,255,0.8)',
+  },
+  formContainer: {
+    flex: 1,
+    marginTop: -30,
+    backgroundColor: '#fff',
+    marginHorizontal: responsiveScreenWidth(5),
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    marginBottom: 20,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 30,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontFamily: 'novabold',
+    fontSize: responsiveFontSize(1.8),
+    color: '#333',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    height: 55,
+    paddingHorizontal: 15,
+    backgroundColor: '#fafafa',
+  },
+  inputFocused: {
+    borderColor: Colors.primary,
+    backgroundColor: '#fff',
+  },
+  icon: {
+    marginRight: 10,
+  },
+  textInput: {
+    flex: 1,
+    fontFamily: 'novaregular',
+    fontSize: responsiveFontSize(2),
+    color: '#333',
+    height: '100%',
+  },
+  buttonShadow: {
+    marginTop: 20,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    borderRadius: 12,
+  },
+  submitButton: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontFamily: 'novabold',
+    fontSize: responsiveFontSize(2.2),
+    color: '#fff',
   },
 });

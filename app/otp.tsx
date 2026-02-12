@@ -1,205 +1,286 @@
-import { Pressable, StyleSheet, Text, View, StatusBar, Alert, ActivityIndicator, Image, TouchableOpacity, ToastAndroid } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  StatusBar,
+  Alert,
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
+  ToastAndroid,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
+} from "react-native";
 import React, { useState } from "react";
 import { OtpInput } from "react-native-otp-entry";
-import instance from '../helper';
-
 import Colors from "../constants/Colors";
-import { Link, router, useLocalSearchParams, useNavigation } from "expo-router";
-import { AntDesign, FontAwesome } from "@expo/vector-icons";
-
-import { _storeData, _retrieveData } from '../local_storage';
-import { path } from "../components/server";
-import { responsiveFontSize, responsiveScreenWidth } from "react-native-responsive-dimensions";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import { FontAwesome } from "@expo/vector-icons";
+import { _storeData } from '../local_storage';
+import axios from '../helper';
+import { responsiveFontSize, responsiveScreenWidth, responsiveScreenHeight } from "react-native-responsive-dimensions";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from 'expo-linear-gradient';
 
-const otp = () => {
-  const { mobile,newuser } = useLocalSearchParams()
-  const navigation = useNavigation()
+const Otp = () => {
+  const { mobile, newuser } = useLocalSearchParams();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(false)
-  const [otp, setOtp] = useState('')
+  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
   const statusBarHeight = insets.top;
 
   const verify = async (mob, p) => {
-    if(p.length < 3){
-      ToastAndroid.show('Require 4 Digit OTP', ToastAndroid.SHORT);
-      return
+    if (!p || p.length < 4) {
+      ToastAndroid.show('Please enter the 4-digit OTP', ToastAndroid.SHORT);
+      return;
     }
-    setLoading(true)
-    console.log(newuser)
+    setLoading(true);
     try {
-      let headersList = {
-        "Accept": "*/*"
-      }
-
       let bodyContent = new FormData();
-      bodyContent.append("action", "verify_otp");
       bodyContent.append("mobile", mob);
       bodyContent.append("otp", p);
 
-      let response = await fetch(path + "login.php", {
-        method: "POST",
-        body: bodyContent,
-        headers: headersList
+      let { data } = await axios.post("auth/verify_otp.php", bodyContent, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
       });
-
-      let data = await response.json();
-      console.log(data)
+      console.log(data);
       if (data.status === 'error') {
         ToastAndroid.show(data.message, ToastAndroid.SHORT);
       } else if (data.status === 'success') {
-        if (newuser) {
-          navigation.navigate("signup", { mobile: mob })
+        // Store Token
+        if (data.data.access_token) await _storeData('ACCESS_TOKEN', data.data.access_token);
+        if (data.data.refresh_token) await _storeData('REFRESH_TOKEN', data.data.refresh_token);
+
+        // Check if user object exists (existing user) or if we need to signup
+        if (data.data.user && data.data.user.name) {
+          const KEY = 'USER_DATA';
+          var udata = { username: data.data.user.name, userid: data.data.user.id, mobile: data.data.user.mobile };
+          console.log(udata);
+          await _storeData(KEY, udata);
+          setLoading(false);
+          router.replace('/tabs');
         } else {
-          const KEY = 'USER_DATA'
-          var udata = new Object({ username: data.data.name, userid: data.data.id, mobile: data.data.mobile })
-          console.log(udata)
-          _storeData(KEY, udata)
-            .then(v => {
-              if (v === "saved") {
-                setLoading(false)
-                router.replace('/tabs')
-              }
-            })
-            .catch(err => console.log(err));
+          // If no user object or name, assume new user -> Signup
+          // @ts-ignore
+          navigation.navigate("signup", { mobile: mob });
+        }
+        ToastAndroid.show(data.message, ToastAndroid.SHORT);
       }
-      console.log(data)
-      ToastAndroid.show(data.message, ToastAndroid.SHORT);
-    }
     } catch (err) {
-    console.log(JSON.stringify(err, null, 2));
-  } finally {
-    setLoading(false)
-  }
-}
+      console.log(JSON.stringify(err, null, 2));
+      ToastAndroid.show("Verification failed. Please try again.", ToastAndroid.SHORT);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-return (
-  <View style={styles.container}>
-    <StatusBar barStyle={'dark-content'} />
-    <FontAwesome onPress={() => {
-      router.back()
-    }} name="chevron-left" color={'#333'} size={responsiveFontSize(2.5)} style={{ position: 'absolute', top: statusBarHeight + 20, left: responsiveScreenWidth(2.5), padding: 10, borderRadius: 20 }} />
-    <Image resizeMode="contain" source={require('../assets/images/otpicon.png')} style={{ height: responsiveScreenWidth(30), width: 100, position: 'absolute', top: '10%', right: '5%' }} />
-    <Text style={styles.subtitle}>Confirmation Code</Text>
-    <Text style={[styles.text,]}>
-      A 4 digit code has been sent to:{'\n'}
-      {mobile}
-    </Text>
-    <Text onPress={() => router.back()} style={[styles.text1, {
-      width: responsiveScreenWidth(17), marginBottom: 20,
-      borderBottomWidth: 1,
-      borderColor: '#333', fontFamily: 'novaregular'
-    }]}>Change</Text>
-    <OtpInput
-      theme={{
-        pinCodeTextStyle: styles.pinCodeText,
-        pinCodeContainerStyle: styles.pinCodeContainer
-      }}
-      numberOfDigits={4}
-      focusColor={Colors.primary}
-      focusStickBlinkingDuration={500}
-      onTextChange={(text) => setOtp(text)}
-      onFilled={(text) => console.log(`OTP is ${text}`)}
-    />
-
-    <TouchableOpacity
-      style={{
-        height: 50,
-        backgroundColor: Colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 10,
-        borderRadius: 8,
-      }}
-      // disabled={!mobile && mobile?.length != 10}
-      onPress={() => verify(mobile, otp)}
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
     >
-      {loading ? (
-        <ActivityIndicator color={'#fff'} />
-      ) : (
-        <Text
-          style={{ fontSize: responsiveFontSize(2.4), color: Colors.backgroundcolor, fontFamily: 'novabold' }}
-        >
-          Verify
-        </Text>
-      )}
-    </TouchableOpacity>
+      <StatusBar barStyle={'dark-content'} backgroundColor="#fff" />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.innerContainer}>
 
-    <View style={{ marginTop: 20, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', width: '100%', marginLeft: 10 }}>
-      <Text onPress={() => Alert.alert('Resend Code !', 'Are you sure you want to resend OTP')} style={[styles.text1, { color: Colors.primary, fontFamily: 'novabold' }]}>Resend OTP</Text>
+          {/* Header / Back Button */}
+          <View style={[styles.header, { marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <FontAwesome name="chevron-left" color='#333' size={responsiveFontSize(2.5)} />
+            </TouchableOpacity>
+          </View>
 
-    </View>
+          {/* Illustration/Icon */}
+          <View style={styles.iconContainer}>
+            <Image
+              resizeMode="contain"
+              source={require('../assets/images/otpicon.png')}
+              style={styles.otpIcon}
+            />
+          </View>
 
-    {/* <Link asChild href={"/signup"}> */}
-    {/* {loading?<Pressable style={styles.button} android_ripple={styles.ripple} >
-        <ActivityIndicator size={'small'} color={Colors.primary} />
-      </Pressable>:
-      <Pressable style={styles.button} android_ripple={styles.ripple} onPress={login}>
-        <AntDesign name="doubleright" size={30} color={Colors.primary} />
-      </Pressable>} */}
-    {/* </Link> */}
-  </View>
-);
+          {/* Texts */}
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>Verification Code</Text>
+            <Text style={styles.subtitle}>
+              We have sent a 4-digit confirmation code to:
+            </Text>
+            <View style={styles.mobileContainer}>
+              <Text style={styles.mobileText}>{mobile}</Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.changeLink}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* OTP Input */}
+          <View style={styles.inputContainer}>
+            <OtpInput
+              numberOfDigits={4}
+              focusColor={Colors.primary}
+              focusStickBlinkingDuration={500}
+              onTextChange={(text) => setOtp(text)}
+              theme={{
+                pinCodeTextStyle: styles.pinCodeText,
+                pinCodeContainerStyle: styles.pinCodeContainer,
+                focusedPinCodeContainerStyle: styles.focusedPinCodeContainer,
+              }}
+            />
+          </View>
+
+          {/* Verify Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => verify(mobile, otp)}
+            disabled={loading}
+            style={styles.buttonShadow}
+          >
+            <LinearGradient
+              colors={[Colors.primary, '#7C9644']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.verifyButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Verify OTP</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Resend */}
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendText}>Didn't receive the code? </Text>
+            <TouchableOpacity onPress={() => Alert.alert('Resend Code', 'Resend OTP functionality coming soon!')}>
+              <Text style={styles.resendLink}>Resend</Text>
+            </TouchableOpacity>
+          </View>
+
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  );
 };
 
-export default otp;
+export default Otp;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    columnGap: 10,
-    rowGap: 10,
-    padding: 20,
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  innerContainer: {
+    flex: 1,
+    paddingHorizontal: responsiveScreenWidth(6),
   },
-  subtitle: {
+  header: {
+    height: 50,
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start', // Align left
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: responsiveScreenHeight(3),
+  },
+  otpIcon: {
+    height: responsiveScreenWidth(35),
+    width: responsiveScreenWidth(35),
+  },
+  textContainer: {
+    marginBottom: responsiveScreenHeight(4),
+  },
+  title: {
     fontSize: responsiveFontSize(3),
     fontFamily: 'novabold',
-    color: '#555'
+    color: '#000',
+    marginBottom: 10,
   },
-  text: {
+  subtitle: {
     fontSize: responsiveFontSize(2),
-    color: '#555',
-    fontFamily: 'novaregular'
+    fontFamily: 'novaregular',
+    color: '#666',
+    marginBottom: 5,
   },
-  text1: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#555',
+  mobileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  input: {
-    borderWidth: 0.5,
-    borderColor: Colors.light.text,
-    padding: 10,
-    borderRadius: 4,
-    width: "90%",
+  mobileText: {
+    fontSize: responsiveFontSize(2.2),
+    fontFamily: 'novabold',
+    color: '#333',
+    marginRight: 10,
   },
-  logo: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
+  changeLink: {
+    fontSize: responsiveFontSize(2),
+    fontFamily: 'novaregular',
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
-  ripple: {
-    color: Colors.light.background,
+  inputContainer: {
+    marginBottom: responsiveScreenHeight(5),
   },
-  button: {
-    position: "absolute",
-    right: 25,
-    bottom: 20,
+  pinCodeContainer: {
+    width: responsiveScreenWidth(16),
+    height: responsiveScreenWidth(16),
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  focusedPinCodeContainer: {
+    borderColor: Colors.primary,
+    backgroundColor: '#FFF',
   },
   pinCodeText: {
-    color: '#555',
-    fontFamily: 'novabold'
-  }
-  , pinCodeContainer: {
-    width: responsiveScreenWidth(18),
-    height: responsiveScreenWidth(18),
-    borderColor: '#555'
-  }
+    fontSize: responsiveFontSize(3),
+    fontFamily: 'novabold',
+    color: '#333',
+  },
+  buttonShadow: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    borderRadius: 12,
+  },
+  verifyButton: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontFamily: 'novabold',
+    fontSize: responsiveFontSize(2.2),
+    color: '#fff',
+  },
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  resendText: {
+    fontFamily: 'novaregular',
+    fontSize: responsiveFontSize(1.8),
+    color: '#666',
+  },
+  resendLink: {
+    fontFamily: 'novabold',
+    fontSize: responsiveFontSize(1.8),
+    color: Colors.primary,
+  },
 });

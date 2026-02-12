@@ -7,7 +7,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../constants/Colors';
 import { ScrollView } from 'react-native-gesture-handler';
 import { router, useLocalSearchParams } from 'expo-router';
-import { path } from '../components/server';
+import axios from '../helper';
 import { _retrieveData, _storeData } from '../local_storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import AddressList from '../components/AddressList';
@@ -43,12 +43,9 @@ export default function PrepscriptionDetails() {
           bodyContent.append("medDetail", mydata);
           bodyContent.append("case", "mediciDetail");
 
-          let response = await fetch("https://irhealthcareservice.com/app_api/medicine.php", {
-               method: "POST",
-               body: bodyContent
+          let { data: data_ } = await axios.post("medicine/medicine.php", bodyContent, {
+               headers: { "Content-Type": "multipart/form-data" }
           });
-          
-          let data_ = await response.json();
           console.log(data)
           var my_data = new Object({ medicine: data_, pdata: pdata[0], address: address, pid: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
           if (!data_.error) {
@@ -92,13 +89,9 @@ export default function PrepscriptionDetails() {
                bodyContent.append("pname", recipt);
                bodyContent.append("address", add);
 
-               let response = await fetch(path + "add_address.php", {
-                    method: "POST",
-                    body: bodyContent,
+               let { data } = await axios.post("address/add_address.php", bodyContent, {
                     headers: headersList
                });
-
-               let data = await response.json();
                if (data.status === "success") {
                     ToastAndroid.show(data.message, ToastAndroid.SHORT);
                }
@@ -137,13 +130,9 @@ export default function PrepscriptionDetails() {
                let bodyContent = new FormData();
                bodyContent.append("mobileno", m_data.mobile);
 
-               let response = await fetch(path + "selectaddress.php", {
-                    method: "POST",
-                    body: bodyContent,
+               let { data } = await axios.post("address/selectaddress.php", bodyContent, {
                     headers: headersList
                });
-
-               let data = await response.json();
                if (data.status === "success") {
                     setaddresslist(data.data)
                }
@@ -168,11 +157,9 @@ export default function PrepscriptionDetails() {
           fd.append("id", data)
           fd.append("case", 'get_prescriptions_byid')
           try {
-               const req = await fetch(path + "prescription.php", {
-                    body: fd,
-                    method: 'post'
-               })
-               const res = await req.json();
+               const { data: res } = await axios.post("prescription/prescription.php", fd, {
+                    headers: { "Content-Type": "multipart/form-data" }
+               });
 
                setItems(JSON.parse(res.data.medicine_data))
                setsItems(JSON.parse(res.data.medicine_data))

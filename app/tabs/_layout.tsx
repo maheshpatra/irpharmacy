@@ -1,56 +1,69 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Feather from '@expo/vector-icons/Feather';
-import Entypo from '@expo/vector-icons/Entypo';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Tabs } from 'expo-router';
-import { responsiveScreenFontSize } from 'react-native-responsive-dimensions';
+import { Platform } from 'react-native';
+import { Ionicons, Feather, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import Colors from '../../constants/Colors';
 
 export default function TabLayout() {
-  
+
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: 'green' ,
-      headerShown:false,
-      tabBarStyle:{
-        height:65,
-        paddingBottom:8,
-        paddingTop:8,borderTopLeftRadius:15,borderTopRightRadius:15,backgroundColor:'#fcfcfc'
-      },
-      tabBarLabelStyle:{
-        fontSize:responsiveScreenFontSize(1.5),
-        fontFamily:'novabold'
-      }
-    
-    }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: '#9DA8B6',
+        headerShown: false,
+        tabBarStyle: {
+          height: Platform.OS === 'ios' ? 88 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          paddingTop: 12,
+          backgroundColor: '#fff',
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontFamily: 'novamedium',
+          marginTop: 4
+        }
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <AntDesign size={28} name="home" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" size={24} color={color} />
+          ),
         }}
-        
       />
-       <Tabs.Screen
+      <Tabs.Screen
         name="prescription"
         options={{
           title: 'Prescriptions',
-          tabBarIcon: ({ color }) => <FontAwesome5 size={28} name="file-prescription" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="file-prescription" size={20} color={color} />
+          ),
         }}
-        
       />
-       <Tabs.Screen
+      <Tabs.Screen
         name="orders"
         options={{
-          title: 'Your Order',
-          tabBarIcon: ({ color }) => <AntDesign size={28} name="profile" color={color} />,
+          title: 'Orders',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="shopping-bag" size={24} color={color} />
+          ),
         }}
-        
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <Feather size={28} name="user" color={color} />,
+          title: 'Account',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="user" size={24} color={color} />
+          ),
         }}
       />
     </Tabs>

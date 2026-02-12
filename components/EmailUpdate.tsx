@@ -9,12 +9,14 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '../constants/Colors';
 
-const EmailUpdate= ({ visible, onClose, onUpdate }) => {
+const EmailUpdate = ({ visible, onClose, onUpdate }: { visible: boolean; onClose: () => void; onUpdate: (email: string) => void }) => {
   const [email, setEmail] = useState('');
 
   const handleUpdate = () => {
-    if (email.trim()) {
+    if (email.trim() && email.includes('@')) {
       onUpdate(email);
       setEmail('');
       onClose();
@@ -32,25 +34,38 @@ const EmailUpdate= ({ visible, onClose, onUpdate }) => {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          style={styles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          <View style={styles.popup}>
-            <Text style={styles.title}>Update Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleUpdate} style={styles.updateButton}>
-                <Text style={styles.updateText}>Update</Text>
-              </TouchableOpacity>
+          <View style={styles.container}>
+            <View style={styles.popup}>
+              <View style={styles.headerRow}>
+                <Text style={styles.title}>Update Email</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={24} color="#999" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.label}>Enter your new email address</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. john@example.com"
+                placeholderTextColor="#999"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity onPress={onClose} style={styles.cancelButton} activeOpacity={0.8}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleUpdate} style={styles.updateButton} activeOpacity={0.8}>
+                  <Text style={styles.updateText}>Update</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -62,41 +77,62 @@ const EmailUpdate= ({ visible, onClose, onUpdate }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  keyboardView: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   container: {
     width: '100%',
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   popup: {
     width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'novabold',
-    marginBottom: 15,
-    textAlign: 'center',
+    color: '#333',
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: 'novamedium',
+    color: '#666',
+    marginBottom: 8,
+    marginLeft: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
-    marginBottom: 20,fontFamily:'novabold'
+    marginBottom: 24,
+    fontFamily: 'novaregular',
+    backgroundColor: '#F9F9F9',
+    color: '#333',
+    height: 50,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -104,28 +140,35 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 5,
+    backgroundColor: '#F0F0F0',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    marginRight: 8,
   },
   updateButton: {
     flex: 1,
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-    marginLeft: 5,
+    backgroundColor: Colors.primary || '#90AA51', // Fallback
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    marginLeft: 8,
+    shadowColor: Colors.primary || '#90AA51',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cancelText: {
-    color: '#000',
-    fontFamily:'novabold',
+    color: '#666',
+    fontFamily: 'novabold',
+    fontSize: 16,
   },
   updateText: {
     color: '#fff',
     fontFamily: 'novabold',
+    fontSize: 16,
   },
 });
 
-export default EmailUpdate ;
+export default EmailUpdate;
