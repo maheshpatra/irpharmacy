@@ -48,7 +48,8 @@ export default function Orders() {
       };
       console.log(payload)
       // 2. Fire the request
-      const response = await axios.post('order/order.php', payload);
+      // 2. Fire the request
+      const response = await axios.get('order/get_orders.php');
 
       // 3. HTTP‐level error?
 
@@ -57,12 +58,12 @@ export default function Orders() {
       console.log('getOrders response:', res);
 
       // 5. API‐level error?
-      if (res.error) {
+      if (res.status !== 'success') {
         throw new Error(res.message || 'Unknown server error');
       }
 
       // 6. Set state (fall back to empty array)
-      setOrders(Array.isArray(res.orders) ? res.orders : []);
+      setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Fetch orders error:', err);
       Alert.alert('Error fetching orders', err.message);
@@ -70,7 +71,7 @@ export default function Orders() {
       // 7. Always clear loading
       setLoading(false);
     }
-  }, [data?.mobile]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,7 +98,7 @@ export default function Orders() {
               <Text style={{ fontFamily: 'novabold', fontSize: responsiveScreenFontSize(2), color: '#333' }}>Order No {"# " + item.order_id}</Text>
               <Text style={{ fontFamily: 'novaregular' }}>Order on {item.date}</Text>
               <View style={{ backgroundColor: '#e3f6da', width: responsiveScreenWidth(42), justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), borderRadius: 10, }}>
-                <Text style={{ fontFamily: 'novabold', color: 'green' }}>{item.order_status}</Text>
+                <Text style={{ fontFamily: 'novabold', color: 'green' }}>{item.status}</Text>
               </View>
             </View>
           </TouchableOpacity>

@@ -97,7 +97,7 @@ export default function UploadPrescriptions() {
     bodyContent.append("name", data.username);
 
     try {
-      const { data: result } = await axios.post('prescription/uploadprescription.php', bodyContent, {
+      const { data: result } = await axios.post('prescription/upload.php', bodyContent, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

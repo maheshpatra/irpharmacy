@@ -41,41 +41,22 @@ const Prescription = () => {
   useEffect(() => {
     if (data) {
       getPrescriptions()
-    } else {
-      // Fallback to dummy data for demonstration if no user or just to show design
-      setPrescriptions(DUMMY_PRESCRIPTIONS);
     }
   }, [data])
 
   const getPrescriptions = async () => {
-    if (!data?.mobile) {
-      setPrescriptions(DUMMY_PRESCRIPTIONS);
-      return;
-    }
-
     setLoading(true)
-    const fd = new FormData();
-    fd.append("mobile", data?.mobile)
-    fd.append("case", 'get_prescriptions')
     try {
-      const { data: res } = await axios.post('prescription/prescription.php', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const { data: res } = await axios.get('prescription/get_prescriptions.php');
 
       if (res && res.data && res.data.length > 0) {
         setPrescriptions(res.data)
-      } else {
-        // Use dummy data if API returns empty, for better UX demonstration (optional, or show empty state)
-        // For now, let's show empty state if API is real but empty, 
-        // BUT since the user asked to "add some dummy data", we will merge or fallback.
-        setPrescriptions(DUMMY_PRESCRIPTIONS);
       }
-      setLoading(false)
     } catch (err) {
-      setLoading(false)
       // Fallback on error
-      setPrescriptions(DUMMY_PRESCRIPTIONS);
       console.log('Error fetching prescriptions, showing dummy data', err);
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -172,7 +153,7 @@ const Prescription = () => {
               <Text style={styles.emptyText}>No Prescriptions Found</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
-                onPress={() => router.push('uploadprescriptions')}
+                onPress={() => router.push('/uploadprescriptions')}
               >
                 <Text style={styles.emptyBtnText}>Upload Now</Text>
               </TouchableOpacity>

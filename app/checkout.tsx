@@ -11,8 +11,8 @@ import { _retrieveData, _storeData } from '../local_storage';
 import axios from '../helper';
 export default function Checkout() {
   const params = useLocalSearchParams()
-  const [data, setData] = useState(null)
-  const [items, setItems] = useState(null);
+  const [data, setData] = useState<any>(null)
+  const [items, setItems] = useState<any[] | null>(null);
   const [pdata, setpdata] = useState(null);
   const [status, setStatus] = useState(null);
   const [address, setaddress] = useState(null);
@@ -97,7 +97,7 @@ export default function Checkout() {
     }
 
     if (data?.mobile == '') {
-      ToastAndroid.long('Invalid Number', ToastAndroid.LONG)
+      ToastAndroid.show('Invalid Number', ToastAndroid.LONG)
       return
     }
 
@@ -110,39 +110,34 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // 3. Build JSON payload matching your PHP keys
-      const payload = {
-        case: 'order',
-        mobile: data?.mobile ?? '',
-        name: data?.username ?? '',
-        prescription_id: id ?? '',
-        address: address ?? '',
-        pdata: pdata,               // will be stored as p_data
-        amount: getFinal().toFixed(2),
-        discount: getTotalDiscountp().toFixed(2),
-        payment_status: 'pending',               // matches your payment_status column
-        paymentmode: 'cash',                  // matches your paymentmode column
-        order_details: items,         // matches your paymentmode column
-        pharId: 12,                   // your pharmacy ID
-        buyer_id: data?.userid ?? '',
-        drname: '',                      // if you want to record a doctor’s name
-        // order_type, order_details, order_status, date, onlinepaymethod, onlinepayid 
-        // will all default server-side if you don’t send them
-      };
+      // 3. Build FormData payload matching v2 doc
+      const fd = new FormData();
+      fd.append('address', address ?? '');
+      fd.append('order_details', JSON.stringify(items));
+      fd.append('pdata', JSON.stringify(pdata));
+      fd.append('amount', getFinal().toFixed(2));
+      fd.append('payment_method', 'COD');
+      fd.append('discount', getTotalDiscountp().toFixed(2));
+
+      // Legacy fields just in case backend needs them or custom extensions
+      fd.append('mobile', data?.mobile ?? '');
+      fd.append('name', data?.username ?? '');
+      fd.append('prescription_id', id ?? '');
+      fd.append('pharId', '12');
 
       // 4. Fire the request
       const { data: res } = await axios.post(
-        'order/order.php',
-        payload,
-        { headers: { 'Content-Type': 'application/json' } }
+        'order/create_order.php',
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
       console.log('PlaceOrder response:', res);
 
       // 5. Handle API errors
-      if (!res.error) {
+      if (res.status === 'success' || !res.error) {
         const total = getFinal();
-        const orderId = res.order_id;
+        const orderId = res.data?.order_id || res.order_id;
 
         router.replace({
           pathname: '/orderconfirm',
@@ -152,13 +147,9 @@ export default function Checkout() {
           }
         });
 
+      } else {
+        ToastAndroid.show(res.message || 'Order Failed', ToastAndroid.LONG);
       }
-
-      // 6. Success: navigate to confirmation
-      // router.replace({
-      //   pathname: '/orderconfirm',
-      //   params: { total }
-      // });
 
     } catch (error) {
 
@@ -175,38 +166,39 @@ export default function Checkout() {
 
 
   const checkStock = async (selectedItems, pincode) => {
-    const sit = selectedItems.map(item => item.id)
-    console.log(sit)
     try {
-      const { data } = await axios.post('medicine/check_stock.php', {
-        selectedItems: selectedItems.map(item => item.id),
-        pincode: pincode,
-      }, {
+      const dataItems = selectedItems.map(item => ({ id: item.id }));
+      const medDetail = JSON.stringify({ pincode, data: dataItems });
+
+      const fd = new FormData();
+      fd.append('medDetail', medDetail);
+
+      const { data } = await axios.post('medicine/search.php', fd, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         }
       });
 
-
       console.log(data)
-      // if (Array.isArray(data)) {
-      //   const updatedItems = selectedItems.map(item => {
-      //     const found = data.find(d => d.id === item.id);
-      //     if (found) {
-      //       return {
-      //         ...item,
-      //         status: found.available ? 'available' : 'notavailable',
-      //         pharID: found.pharID || null,
-      //       };
-      //     }
-      //     return item;
-      //   });
-
-      //   return updatedItems;
-      // } else {
-      //   console.error('Error in response:', data);
-      //   return selectedItems;
-      // }
+      // Assuming API returns array of objects with id to map back
+      if (Array.isArray(data)) {
+        return selectedItems.map(item => {
+          // If response has id, match by id. result might not have id if it's purely search result
+          // But usually it should return id. If not, we might assume order?
+          // For safety, checks if we can find a match by id.
+          const found = data.find(d => d.id == item.id || d.name == item.name);
+          if (found) {
+            return {
+              ...item,
+              status: found.status?.toLowerCase() === 'available' ? 'available' : 'notavailable',
+              pharID: found.pharID || null,
+              price: found.price || item.price
+            };
+          }
+          return item;
+        });
+      }
+      return selectedItems;
     } catch (error) {
       console.error('checkStock error:', error);
       return selectedItems;
@@ -230,53 +222,49 @@ export default function Checkout() {
 
 
   const placeOnlineOrder = async (paymentData) => {
-    const amount = getFinal()
-    const m_data = items.filter(item => item.qty >= 1);
     setLoading(true);
 
     try {
-      const payload = {
-        case: 'order',
-        mobile: data?.mobile ?? '',
-        name: data?.username ?? '',
-        prescription_id: id ?? '',
-        address: address ?? '',
-        pdata: pdata,               // will be stored as p_data
-        amount: getFinal().toFixed(2),
-        discount: getTotalDiscountp().toFixed(2),
-        payment_status: 'Paid',               // matches your payment_status column
-        paymentmode: 'RPAY',                  // matches your paymentmode column
-        order_details: items,         // matches your paymentmode column
-        pharId: 12,                   // your pharmacy ID
-        buyer_id: data?.userid ?? '',
-        drname: '',
-        onlinepaymethod: "Online (R-Pay)",
-        onlinepayid: paymentData.razorpay_payment_id                    // if you want to record a doctor’s name
+      const totalAmount = getFinal().toFixed(2);
 
-      };
+      const fd = new FormData();
+      fd.append('address', address ?? '');
+      fd.append('order_details', JSON.stringify(items));
+      fd.append('pdata', JSON.stringify(pdata));
+      fd.append('amount', totalAmount);
+      fd.append('payment_method', 'Online'); // or RPAY
+      fd.append('discount', getTotalDiscountp().toFixed(2));
+
+      // Extra fields
+      fd.append('mobile', data?.mobile ?? '');
+      fd.append('name', data?.username ?? '');
+      fd.append('prescription_id', id ?? '');
+      fd.append('pharId', '12');
+      fd.append('onlinepayid', paymentData.razorpay_payment_id);
 
       // 4. Fire the request
       const { data: res } = await axios.post(
-        'order/order.php',
-        payload,
-        { headers: { 'Content-Type': 'application/json' } }
+        'order/create_order.php',
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
       console.log('PlaceOrder response:', res);
 
 
-      if (!res.error) {
-        const total = getFinal().toFixed(2);
-        const orderId = res.order_id;
+      if (res.status === 'success' || !res.error) {
+        const orderId = res.data?.order_id || res.order_id;
 
         router.replace({
           pathname: '/orderconfirm',
           params: {
-            total,
+            total: totalAmount,
             order_id: orderId
           }
         });
 
+      } else {
+        ToastAndroid.show(res.message || 'Order Failed', ToastAndroid.LONG);
       }
 
     } catch (error) {
@@ -287,6 +275,8 @@ export default function Checkout() {
 
       // show a toast for 3.5 seconds
       ToastAndroid.show(message, ToastAndroid.LONG);
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -17,15 +17,15 @@ export default function OrderDetails() {
      const [address, setaddress] = useState(null);
      const { data } = useLocalSearchParams();
      const [addresstype, setaddresstype] = useState('Home');
-     const [pdata, setpdata] = useState(null);
+     const [pdata, setpdata] = useState<any>(null);
      const [status, setStatus] = useState(null);
      const [discount, setDiscount] = useState(0);
      const [image, setimage] = useState(null);
 
 
-     const [items, setItems] = useState(null);
+     const [items, setItems] = useState<any>(null);
      const [loading, setLoading] = useState(false);
-     const [mydata, setMydata] = useState(null);
+     const [mydata, setMydata] = useState<any>(null);
 
 
 
@@ -33,24 +33,41 @@ export default function OrderDetails() {
      const getorder = async () => {
           setLoading(true)
           const fd = new FormData();
-          fd.append("id", data)
-          fd.append("case", 'get_order_byid')
+          const orderIdParam = Array.isArray(data) ? data[0] : data;
+          fd.append("id", orderIdParam as string)
+
           try {
-               const { data: res } = await axios.post("order/order.php", fd, {
+               const { data: res } = await axios.post("order/get_order.php", fd, {
                     headers: { "Content-Type": "multipart/form-data" }
                });
                console.log(res)
 
-               setItems(JSON.parse(res.data.order_details))
-               setpdata(JSON.parse(res.data.p_data))
-               setStatus(res.data.order_status)
-               setDiscount(res.data.discount)
-               setaddress(res.data.address)
-               setMydata(res.data)
+               if (res.status === 'success' && res.data) {
+                    const d = res.data;
+                    // Helper to safe parse if string, else return as is
+                    const safeParse = (val) => {
+                         if (typeof val === 'string') {
+                              try { return JSON.parse(val); } catch (e) { return val; }
+                         }
+                         return val;
+                    };
 
+                    // v2 doc says 'items' for order details
+                    // If it comes as string, parse it, otherwise use as array
+                    setItems(Array.isArray(d.items) ? d.items : safeParse(d.order_details));
+
+                    setpdata(safeParse(d.pdata || d.p_data));
+                    setStatus(d.status || d.order_status);
+                    setDiscount(d.discount);
+                    setaddress(d.address);
+                    setMydata(d);
+               } else {
+                    Alert.alert('Error', res.message || "Failed to load order");
+               }
                setLoading(false)
           } catch (err) {
                console.log(JSON.stringify(err, null, 2));
+               setLoading(false)
           }
      }
 
