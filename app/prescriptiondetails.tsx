@@ -1,16 +1,15 @@
-import { View, Text, FlatList, Image, TouchableOpacity, Modal, Alert, TextInput, ToastAndroid, ActivityIndicator } from 'react-native'
+import { View, Text, FlatList, Image, TouchableOpacity, Modal, Alert, TextInput, ToastAndroid, ActivityIndicator, StyleSheet, ScrollView, StatusBar } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import HeaderAB from '../components/HeaderAB'
-import { responsiveFontSize, responsiveScreenFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions'
-import Entypo from '@expo/vector-icons/Entypo';
-import AntDesign from '@expo/vector-icons/AntDesign';
+import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions'
+import { Entypo, AntDesign, MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
-import { ScrollView } from 'react-native-gesture-handler';
 import { router, useLocalSearchParams } from 'expo-router';
 import axios from '../helper';
 import { _retrieveData, _storeData } from '../local_storage';
-import { MaterialIcons } from '@expo/vector-icons';
 import AddressList from '../components/AddressList';
+import * as Location from 'expo-location';
+
 export default function PrepscriptionDetails() {
      const [modalVisible, setModalVisible] = useState(false);
      const [address, setaddress] = useState(null);
@@ -21,64 +20,70 @@ export default function PrepscriptionDetails() {
      const [status, setStatus] = useState(null);
      const [discount, setDiscount] = useState(0);
      const [image, setimage] = useState(null);
-     const [pin, setpin] = useState(null);
+     const [pin, setpin] = useState('');
      const [spin, setspin] = useState(null);
-     const [fulladd, setfulladd] = useState(null);
-     const [recipt, setrecipt] = useState(null);
-     const [mnumber, setnum] = useState(null);
-     const [user, setuser] = useState('');
+     const [fulladd, setfulladd] = useState('');
+     const [recipt, setrecipt] = useState('');
+     const [mnumber, setnum] = useState('');
+     const [user, setuser] = useState<any>('');
      const [lmodalVisible, setlModalVisible] = useState(false);
-     const [items, setItems] = useState(null);
-     const [sitems, setsItems] = useState(null);
+     const [items, setItems] = useState<any[]>([]);
+     const [sitems, setsItems] = useState<any[]>([]);
      const [loading, setLoading] = useState(false);
-
+     const [locationLoading, setLocationLoading] = useState(false);
 
 
      const getmedprice = async () => {
+          if (!sitems || sitems.length === 0) {
+               Alert.alert('No Items Selected', 'Please select at least one medicine to proceed.');
+               return;
+          }
+          setLoading(true);
           const m_data = sitems
-               .filter(item => item.id) // ensures only items with a valid id
+               .filter(item => item.id)
                .map(item => ({ id: item.id }));
           const mydata = JSON.stringify({ data: m_data, pincode: spin })
           let bodyContent = new FormData();
           bodyContent.append("medDetail", mydata);
           bodyContent.append("case", "mediciDetail");
 
-          let { data: data_ } = await axios.post("medicine/medicine.php", bodyContent, {
-               headers: { "Content-Type": "multipart/form-data" }
-          });
-          console.log(data)
-          var my_data = new Object({ medicine: data_, pdata: pdata[0], address: address, pid: data, discount: discount, total: Number(getTotalPrice().toFixed(2) - discount), })
-          if (!data_.error) {
-               const KEY = 'MED'
-               _storeData(KEY, my_data)
-                    .then(v => {
-                         if (v === "saved") {
-                              setLoading(false)
-                              router.replace({ pathname: `/checkout`, params: { ...address } })
-                         }
-                    })
-                    .catch(err => console.log(err));
-          } else {
+          try {
+               let { data: data_ } = await axios.post("medicine/medicine.php", bodyContent, {
+                    headers: { "Content-Type": "multipart/form-data" }
+               });
 
-
-               Alert.alert(
-                    "⚠️ Medicine Not Available",
-                    "The selected medicine is currently not available for the entered pin code.\n\nPlease check the pin code or try searching for another medicine.",
-                    [
-                         { text: "OK", onPress: () => console.log("User acknowledged alert") }
-                    ],
-                    { cancelable: false }
-               );
-
+               if (!data_.error) {
+                    const my_data = { medicine: data_, pdata: pdata ? pdata[0] : {}, address: address, pid: data, discount: discount, total: 0 }
+                    const KEY = 'MED'
+                    await _storeData(KEY, my_data);
+                    router.replace({ pathname: `/checkout`, params: { ...address } })
+               } else {
+                    Alert.alert(
+                         "⚠️ Medicine Not Available",
+                         "The selected medicine is currently not available for the entered pin code.\n\nPlease check the pin code or try searching for another medicine.",
+                         [
+                              { text: "OK", onPress: () => console.log("User acknowledged alert") }
+                         ],
+                         { cancelable: false }
+                    );
+               }
+          } catch (error) {
+               console.log(error);
+               Alert.alert('Error', 'Something went wrong while fetching medicine details.');
+          } finally {
+               setLoading(false)
           }
-
      }
+
      const addAddress = async () => {
+          if (!fulladd || !pin || !recipt || !mnumber) {
+               ToastAndroid.show("Please fill all fields", ToastAndroid.SHORT);
+               return;
+          }
           setLoading(true)
 
           try {
-
-               const add = fulladd + pin
+               const add = fulladd + ' ' + pin
                let headersList = {
                     "Accept": "*/*"
                }
@@ -88,45 +93,80 @@ export default function PrepscriptionDetails() {
                bodyContent.append("usermob", mnumber);
                bodyContent.append("pname", recipt);
                bodyContent.append("address", add);
+               bodyContent.append("type", addresstype);
 
                let { data } = await axios.post("address/add_address.php", bodyContent, {
                     headers: headersList
                });
                if (data.status === "success") {
                     ToastAndroid.show(data.message, ToastAndroid.SHORT);
+                    getalladdress(user);
+                    setModalVisible(false);
+                    // Reset form
+                    setrecipt('');
+                    setpin('');
+                    setfulladd('');
+                    setnum('');
+               } else {
+                    ToastAndroid.show(data.message || "Failed to add address", ToastAndroid.SHORT);
                }
-               getalladdress(user)
           } catch (error) {
-
+               console.log(error);
+               ToastAndroid.show("Error adding address", ToastAndroid.SHORT);
           } finally {
                setLoading(false)
-               setModalVisible(false);
-               setrecipt(null)
-               setStatus(null)
-               setpin(null)
-               setfulladd(null)
-               setnum(null)
+          }
+     };
 
+     const getCurrentLocation = async () => {
+          setLocationLoading(true);
+          try {
+               let { status } = await Location.requestForegroundPermissionsAsync();
+               if (status !== 'granted') {
+                    Alert.alert('Permission Denied', 'Permission to access location was denied. Please enter address manually.');
+                    return;
+               }
+
+               let location = await Location.getCurrentPositionAsync({});
+               let addresses = await Location.reverseGeocodeAsync({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude
+               });
+
+               if (addresses && addresses.length > 0) {
+                    const addr = addresses[0];
+                    setpin(addr.postalCode || '');
+                    const street = addr.street || '';
+                    const name = addr.name || '';
+                    const city = addr.city || '';
+                    const region = addr.region || '';
+                    // Construct a readable address avoiding duplicates
+                    let formattedAddress = '';
+                    if (name && name !== street) formattedAddress += name + ', ';
+                    formattedAddress += street;
+                    if (city) formattedAddress += ', ' + city;
+                    if (region) formattedAddress += ', ' + region;
+
+                    setfulladd(formattedAddress);
+               }
+          } catch (error) {
+               Alert.alert('Error', 'Failed to fetch location. Please enter manually.');
+          } finally {
+               setLocationLoading(false);
           }
      };
 
      useEffect(() => {
           _retrieveData("USER_DATA").then((data) => {
                setuser(data)
-               getalladdress(data)
+               if (data) getalladdress(data)
           })
-
      }, [])
 
 
      const getalladdress = async (m_data) => {
-          setLoading(true)
-
           try {
-               let headersList = {
-                    "Accept": "*/*"
-               }
-
+               let headersList = { "Accept": "*/*" }
                let bodyContent = new FormData();
                bodyContent.append("mobileno", m_data.mobile);
 
@@ -137,14 +177,8 @@ export default function PrepscriptionDetails() {
                     setaddresslist(data.data)
                }
           } catch (error) {
-
-          } finally {
-               setLoading(false)
+               console.log(error);
           }
-
-
-
-
      }
 
      const gotocheckout = () => {
@@ -153,23 +187,33 @@ export default function PrepscriptionDetails() {
 
      const getprescription = async () => {
           setLoading(true)
-          const fd = new FormData();
-          fd.append("id", data)
-          fd.append("case", 'get_prescriptions_byid')
           try {
-               const { data: res } = await axios.post("prescription/prescription.php", fd, {
-                    headers: { "Content-Type": "multipart/form-data" }
-               });
+               const { data: res } = await axios.get(`prescription/get_prescription.php?id=${data}`);
 
-               setItems(JSON.parse(res.data.medicine_data))
-               setsItems(JSON.parse(res.data.medicine_data))
-               setpdata(JSON.parse(res.data.patient_details))
-               setStatus(res.data.type)
-               setDiscount(res.data.discount)
-               setimage(res.data.image)
-               setLoading(false)
+               if (res.status === "success" && res.data && res.data.length > 0) {
+                    const item = res.data[0];
+
+                    let mData = item.medicine_data;
+                    if (typeof mData === 'string') {
+                         try { mData = JSON.parse(mData); } catch (e) { console.log(e) }
+                    }
+                    setItems(mData || []);
+                    setsItems(mData || []);
+
+                    let pData = item.patient_details;
+                    if (typeof pData === 'string') {
+                         try { pData = JSON.parse(pData); } catch (e) { console.log(e) }
+                    }
+                    setpdata(Array.isArray(pData) ? pData : [pData]);
+
+                    setStatus(item.type)
+                    setDiscount(item.discount)
+                    setimage(item.image)
+               }
           } catch (err) {
                console.log(JSON.stringify(err, null, 2));
+          } finally {
+               setLoading(false)
           }
      }
 
@@ -177,191 +221,151 @@ export default function PrepscriptionDetails() {
           getprescription()
      }, [data])
 
-
-
-
-
      const handleCheck = (id) => {
           const item = items.find(i => i.id === id);
           const alreadySelected = sitems?.some(s => s.id === id);
 
           if (alreadySelected) {
-               // Uncheck → remove from sitems
                setsItems(prev => prev.filter(i => i.id !== id));
           } else {
-               // Check → add to sitems
                setsItems(prev => [...prev, { ...item, qty: 1 }]);
           }
      };
 
      const handleSelectAddress = (add) => {
-          // Alert.alert(
-          //      'Selected Address',
-          //      `${address.recipientName}, ${address.fullAddress}, Pincode: ${address.pincode}, Phone: ${address.phoneNumber}, Type: ${address.addressType}`
-          // );
-          const address = add.address;
-          const match = address.match(/(\d{6})/);
+          const addressVal = add.address;
+          const match = addressVal.match(/(\d{6})/);
           const pincode = match ? match[1] : null;
           setaddress(add)
           setlModalVisible(false);
           setspin(pincode)
      };
 
+     const renderHeader = () => (
+          <View>
+               {/* Patient Profile Card */}
+               <View style={styles.card}>
+                    {pdata && pdata[0] && (
+                         <View style={styles.patientRow}>
+                              <Image
+                                   resizeMode='cover'
+                                   style={styles.patientImage}
+                                   source={pdata[0].gender == 'Female' ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')}
+                              />
+                              <View style={styles.patientInfo}>
+                                   <Text style={styles.patientName}>{pdata[0].name}</Text>
+                                   <Text style={styles.patientDetails}>{pdata[0].gender} • {pdata[0].age} Years</Text>
+                              </View>
+                         </View>
+                    )}
+               </View>
 
+               {/* Prescription Image */}
+               {image && (
+                    <View style={styles.card}>
+                         <Text style={styles.sectionTitle}>Prescription</Text>
+                         <Image
+                              resizeMode='contain'
+                              source={{ uri: image }}
+                              style={styles.prescriptionImage}
+                         />
+                    </View>
+               )}
 
-     const deleteItem = (id) => {
-          setItems(items.filter(item => item.id !== id));
-     };
-     const getTotalPrice = () => {
-          return items.reduce((total, item) => total + Number(item.price) * item.quantity, 1);
-     };
+               {/* Medicines Header */}
+               <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Select Medicines</Text>
+                    <Text style={styles.subtitle}>Confim medicines to purchase</Text>
+               </View>
+          </View>
+     );
 
-     function percentage(percent, total) {
-          return ((percent / 100) * total).toFixed(2)
-     }
      return (
-          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={styles.container}>
+               <StatusBar barStyle="dark-content" backgroundColor="#fff" />
                <HeaderAB title={'Prescription Details'} />
-               {status && <Text style={{ alignSelf: 'center', color: 'green', fontFamily: 'novabold' }}>{status}</Text>}
-               <View style={{ height: responsiveScreenHeight(70) }}>
-                    <FlatList
-                         data={items}
-                         showsVerticalScrollIndicator={false}
-                         ListHeaderComponent={() =>
-                              <View>
-                                   <View style={{ marginTop: 15, width: '90%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: responsiveScreenWidth(12) }}>
-                                        {pdata && <Image resizeMode='cover' style={{ height: responsiveScreenWidth(15), width: responsiveScreenWidth(15), borderRadius: 40 }} source={pdata[0].gender == 'Female' ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')} />}
-                                        {pdata && <View style={{ marginLeft: 25, width: '70%', }}>
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333', }}>{pdata[0].name}</Text>
-                                             <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: '#333', }}>{pdata[0].gender + " , " + pdata[0].age + " Years"} </Text>
 
-                                        </View>}
-
-                                   </View>
-
-                                   {image && <Image resizeMode='stretch' source={{ uri: image }} style={{ backgroundColor: '#ccc', height: responsiveScreenWidth(51), width: responsiveScreenWidth(45), alignSelf: 'center', marginVertical: responsiveScreenWidth(5), borderRadius: 8 }} />}
-                              </View>
-
-                         }
-                         renderItem={({ item, index }) =>
-
-                              <View style={{ width: '95%', alignSelf: 'center', height: responsiveScreenWidth(22), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
+               <FlatList
+                    data={items}
+                    keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    ListHeaderComponent={renderHeader}
+                    renderItem={({ item }) => (
+                         <TouchableOpacity activeOpacity={0.8} onPress={() => handleCheck(item.id)} style={styles.medicineCard}>
+                              <View style={styles.medicineImageContainer}>
                                    {item.image ? (
-                                        <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={{ uri: item.image }} />
+                                        <Image style={styles.medicineImage} source={{ uri: item.image }} />
                                    ) : (
-                                        <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
+                                        <Image style={styles.medicineImage} source={require('../assets/images/noprevew.png')} />
                                    )}
-                                   <View style={{ marginLeft: 10, height: '50%', justifyContent: 'space-between', width: '45%', marginRight: 15 }}>
-                                        <Text numberOfLines={1} style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
-                                        <Text numberOfLines={1} style={{ fontFamily: 'novaregular' }}>{item.desc}</Text>
-                                        {/* <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
-
-                                             <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ " + item.price}</Text>
-                                             <Text style={{ fontFamily: 'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ " + item.original_price}</Text>
-                                             <Text style={{ color: 'green', marginLeft: 10, fontFamily: 'novaregular' }}>{item.offer}</Text>
-                                        </View> */}
-
-                                   </View>
-                                   <View style={{ width: '15%', height: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }}>
-                                        {sitems?.some(i => i.id === item.id) ? (
-                                             <MaterialIcons
-                                                  onPress={() => handleCheck(item.id)}
-                                                  size={responsiveFontSize(3.5)}
-                                                  name="check-box"
-                                                  color={'#367F52'}
-                                             />
-                                        ) : (
-                                             <MaterialIcons
-                                                  onPress={() => handleCheck(item.id)}
-                                                  size={responsiveFontSize(3.5)}
-                                                  name="check-box-outline-blank"
-                                                  color={'#367F52'}
-                                             />
-                                        )}
-                                   </View>
-                                   {/* <View style={{ width: '30%', height: '55%', borderWidth: 1.5, borderColor: '#367F52', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
-                                        {item.qty > 1 ? (
-                                             <AntDesign onPress={() => decreaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="minus" color={'#367F52'} />
-                                        ) : (
-                                             <AntDesign onPress={() => decreaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="delete" color={'#367F52'} />
-                                        )}
-                                        
-                                        
-
-                                        <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: '#333' }}>{item.qty}</Text>
-                                        <AntDesign onPress={() => increaseQuantity(item.id)} size={responsiveFontSize(2.5)} name="plus" color={'#367F52'} />
-                                   </View> */}
                               </View>
-                         }
-                         ListFooterComponent={() =>
-                              <View>
-                                   <View style={{ borderTopWidth: 1, borderColor: '#ccc', marginTop: 20, borderBottomWidth: 1, paddingBottom: 2 }}>
-                                        <View style={{ width: '90%', alignSelf: 'center' }}>
-                                             {/* <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text> */}
-
-                                             {/* <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Item total'}</Text>
-                                                  {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {getTotalPrice().toFixed(2)}</Text>}
-                                             </View>
-                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Shipping fee'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'free'}</Text>
-                                             </View>
-                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Total Discount'}</Text>
-                                                  <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{discount}</Text>
-                                             </View>
-                                             <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-
-                                                  <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
-                                                  {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(getTotalPrice().toFixed(2)) - discount}</Text>}
-                                             </View> */}
-                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: responsiveScreenWidth(12) }}>
-                                                  <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
-                                                  {address ? <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>{address.pname + ', ' + address.address}</Text> : <Text numberOfLines={1} onPress={() => setlModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '60%', textAlign: 'right' }}>Select Address</Text>}
-                                             </View>
+                              <View style={styles.medicineDetails}>
+                                   <Text numberOfLines={1} style={styles.medicineName}>{item.name}</Text>
+                                   <Text numberOfLines={1} style={styles.medicineDesc}>{item.desc}</Text>
+                              </View>
+                              <View style={styles.checkboxContainer}>
+                                   {sitems?.some(i => i.id === item.id) ? (
+                                        <MaterialIcons name="check-box" size={28} color={Colors.primary} />
+                                   ) : (
+                                        <MaterialIcons name="check-box-outline-blank" size={28} color="#ccc" />
+                                   )}
+                              </View>
+                         </TouchableOpacity>
+                    )}
+                    ListFooterComponent={() => (
+                         <View style={styles.footerContainer}>
+                              <View style={styles.addressSection}>
+                                   <View style={styles.addressHeader}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                             <Entypo name="location-pin" size={20} color={Colors.primary} />
+                                             <Text style={styles.addressLabel}>Delivering to</Text>
                                         </View>
-
+                                        <TouchableOpacity onPress={() => address ? setlModalVisible(true) : setModalVisible(true)}>
+                                             <Text style={styles.changeBtn}>CHANGE</Text>
+                                        </TouchableOpacity>
                                    </View>
-                                   <View style={{ borderTopWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), alignSelf: 'center', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
 
-                                        <Text style={{ color: '#333', fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}><Entypo size={responsiveFontSize(3)} name="location-pin" color={'#367F52'} /> Address</Text>
-                                        <Text onPress={() => setModalVisible(true)} style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold' }}>{'Add New Address'}</Text>
-                                   </View>
+                                   {address ? (
+                                        <TouchableOpacity onPress={() => setlModalVisible(true)}>
+                                             <Text style={styles.addressText} numberOfLines={2}>
+                                                  <Text style={styles.addressName}>{address.pname}</Text> {address.address}
+                                             </Text>
+                                        </TouchableOpacity>
+                                   ) : (
+                                        <TouchableOpacity style={styles.addAddressBtn} onPress={() => setModalVisible(true)}>
+                                             <AntDesign name="plus" size={18} color={Colors.primary} />
+                                             <Text style={styles.addAddressText}>Add New Address</Text>
+                                        </TouchableOpacity>
+                                   )}
                               </View>
-                         }
-                    />
-               </View>
-               <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd', position: 'absolute', bottom: 0, backgroundColor: '#fff' }}>
-                    {/* {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {getTotalPrice().toFixed(2) - discount}</Text>} */}
-                    <View />
+                         </View>
+                    )}
+               />
+
+               {/* Bottom Action Bar */}
+               <View style={styles.bottomBar}>
+                    <View style={styles.selectedCount}>
+                         <Text style={styles.selectedLabel}>{sitems.length} Items Selected</Text>
+                    </View>
                     <TouchableOpacity
-                         style={{
-                              height: 50,
-                              backgroundColor: Colors.primary,
-                              alignItems: "center",
-                              justifyContent: "center",
-                              marginRight: 20,
-                              borderRadius: 6,
-                              width: '40%'
-                         }}
+                         style={[styles.proceedBtn, { opacity: sitems.length > 0 ? 1 : 0.6 }]}
                          onPress={() => {
-                              address ? gotocheckout() :
-                                   Alert.alert('Add Address', 'Please add your address first')
+                              if (address) {
+                                   gotocheckout();
+                              } else {
+                                   Alert.alert('Address Required', 'Please add a delivery address first', [
+                                        { text: 'Add Address', onPress: () => setModalVisible(true) }
+                                   ]);
+                              }
                          }}
+                         disabled={loading}
                     >
-
-                         <Text
-                              style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: Colors.backgroundcolor }}
-                         >
-                              Proceed
-                         </Text>
-                         {/* )} */}
+                         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.proceedText}>Proceed</Text>}
                     </TouchableOpacity>
-
-
-
                </View>
+
+               {/* Address Selection List Modal */}
                <AddressList
                     visible={lmodalVisible}
                     onClose={() => setlModalVisible(false)}
@@ -369,90 +373,419 @@ export default function PrepscriptionDetails() {
                     onSelect={handleSelectAddress}
                     loading={loading}
                />
+
+               {/* Add New Address Modal */}
                <Modal
                     animationType="slide"
                     transparent={true}
                     visible={modalVisible}
-                    onRequestClose={() => {
-                         Alert.alert('Modal has been closed.');
-                         setModalVisible(!modalVisible);
-                    }}>
-                    <View style={{ flex: 1, backgroundColor: '#000', opacity: .9 }}>
-                         <View style={{ position: 'absolute', bottom: 0, height: responsiveScreenHeight(65), backgroundColor: '#fff', width: '100%' }}>
-                              <View style={{ height: '90%' }}>
-                                   <ScrollView >
-                                        <View style={{ borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(15), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', }}>
+                    onRequestClose={() => setModalVisible(false)}
+               >
+                    <View style={styles.modalOverlay}>
+                         <View style={styles.modalContent}>
+                              <View style={styles.modalHeader}>
+                                   <Text style={styles.modalTitle}>Add Address Details</Text>
+                                   <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+                                        <AntDesign name="close" size={24} color="#555" />
+                                   </TouchableOpacity>
+                              </View>
 
-                                             <Text style={{ color: '#555', fontFamily: 'novabold', marginLeft: 20, fontSize: responsiveFontSize(2.3) }}>Add Address Details</Text>
-                                             <AntDesign onPress={() => setModalVisible(false)} style={{ marginRight: 20, padding: 5 }} size={responsiveScreenFontSize(2.3)} name="close" color={'#555'} />
+                              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+
+                                   <TouchableOpacity
+                                        style={styles.locationBtn}
+                                        onPress={getCurrentLocation}
+                                        disabled={locationLoading}
+                                   >
+                                        {locationLoading ? (
+                                             <ActivityIndicator size="small" color={Colors.primary} />
+                                        ) : (
+                                             <>
+                                                  <FontAwesome5 name="location-arrow" size={16} color={Colors.primary} />
+                                                  <Text style={styles.locationBtnText}>Use My Current Location</Text>
+                                             </>
+                                        )}
+                                   </TouchableOpacity>
+
+                                   <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Pincode*</Text>
+                                        <TextInput
+                                             value={pin}
+                                             onChangeText={setpin}
+                                             keyboardType="number-pad"
+                                             placeholder="Ex: 700091"
+                                             style={styles.input}
+                                        />
+                                   </View>
+
+                                   <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>House no, Building, Street, Area*</Text>
+                                        <TextInput
+                                             value={fulladd}
+                                             onChangeText={setfulladd}
+                                             placeholder="Enter full address"
+                                             multiline
+                                             style={[styles.input, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
+                                        />
+                                   </View>
+
+                                   <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Recipient Name*</Text>
+                                        <TextInput
+                                             value={recipt}
+                                             onChangeText={setrecipt}
+                                             placeholder="Name of receiver"
+                                             style={styles.input}
+                                        />
+                                   </View>
+
+                                   <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Phone Number*</Text>
+                                        <TextInput
+                                             value={mnumber}
+                                             onChangeText={setnum}
+                                             keyboardType="phone-pad"
+                                             placeholder="10-digit mobile number"
+                                             style={styles.input}
+                                        />
+                                   </View>
+
+                                   <View style={styles.inputGroup}>
+                                        <Text style={styles.inputLabel}>Address Type</Text>
+                                        <View style={styles.typeContainer}>
+                                             {['Home', 'Office', 'Other'].map((type) => (
+                                                  <TouchableOpacity
+                                                       key={type}
+                                                       onPress={() => setaddresstype(type)}
+                                                       style={[styles.typeBtn, addresstype === type && styles.typeBtnActive]}
+                                                  >
+                                                       <Text style={[styles.typeText, addresstype === type && styles.typeTextActive]}>{type}</Text>
+                                                  </TouchableOpacity>
+                                             ))}
                                         </View>
+                                   </View>
 
-                                        <View style={{ marginTop: 0, borderTopWidth: 1, borderColor: '#ccc', width: '100%', paddingTop: 15 }}>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginBottom: 20 }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Pincode* </Text>
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                                       <TextInput value={pin} onChangeText={(txt) => setpin(txt)} style={{ width: '50%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular' }} />
-                                                       {/* <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2.), marginLeft: 10 }}>Kolkata-West Bengal </Text> */}
-                                                  </View>
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>House number,floor,building name,locality* </Text>
-                                                  <TextInput value={fulladd} onChangeText={(txt) => setfulladd(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Recipient's name* </Text>
-                                                  <TextInput value={recipt} onChangeText={(txt) => setrecipt(txt)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', height: responsiveScreenWidth(15), marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Phone Number* </Text>
-                                                  <TextInput value={mnumber} onChangeText={(text) => setnum(text)} style={{ width: '100%', borderRadius: 6, borderColor: '#ccc', borderWidth: 1, height: responsiveScreenWidth(12), paddingLeft: 10, color: '#333', fontFamily: 'novaregular', marginTop: 5 }} />
-                                             </View>
-                                             <View style={{ width: '90%', alignSelf: 'center', marginTop: responsiveScreenWidth(5) }}>
-                                                  <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), }}>Address Type* </Text>
-                                                  <FlatList
-                                                       data={['Home', 'Office', 'Other']}
-                                                       horizontal
-                                                       renderItem={({ item }) =>
-                                                            <TouchableOpacity onPress={() => setaddresstype(item)} style={{ height: 30, width: responsiveScreenWidth(20), borderRadius: 4, borderColor: addresstype == item ? '#000' : '#555', justifyContent: 'center', alignItems: 'center', borderWidth: 1, marginRight: 10, marginTop: 15 }}>
-                                                                 <Text style={{ color: addresstype == item ? '#000' : '#555', fontFamily: addresstype == item ? 'novabold' : 'novaregular' }}>{item}</Text>
-                                                            </TouchableOpacity>
-                                                       }
+                                   <View style={{ height: 20 }} />
+                              </ScrollView>
 
-                                                  />
-                                             </View>
-
-                                        </View>
-                                   </ScrollView>
+                              <View style={styles.modalFooter}>
+                                   <TouchableOpacity
+                                        style={styles.saveBtn}
+                                        disabled={loading}
+                                        onPress={addAddress}
+                                   >
+                                        {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save Address</Text>}
+                                   </TouchableOpacity>
                               </View>
                          </View>
-
-                         <TouchableOpacity
-                              style={{
-                                   height: 50,
-                                   backgroundColor: Colors.primary,
-                                   alignItems: "center",
-                                   justifyContent: "center",
-                                   marginTop: 10,
-                                   borderRadius: 6,
-                                   width: '70%',
-                                   alignSelf: 'center', bottom: 10, position: 'absolute'
-                              }}
-                              disabled={loading}
-                              onPress={() => { addAddress(mnumber, user.mobile, recipt, fulladd + pin) }}
-                         >
-
-                              {loading ?
-
-                                   <ActivityIndicator size={'small'} color={'#fff'} />
-                                   : <Text
-                                        style={{ fontWeight: "bold", fontSize: responsiveFontSize(2), color: Colors.backgroundcolor }}
-                                   >
-                                        Save Address
-                                   </Text>}
-                              {/* )} */}
-                         </TouchableOpacity>
                     </View>
                </Modal>
           </View>
      )
 }
+
+const styles = StyleSheet.create({
+     container: {
+          flex: 1,
+          backgroundColor: '#F7F7F7',
+     },
+     card: {
+          backgroundColor: '#fff',
+          marginHorizontal: 15,
+          marginTop: 15,
+          borderRadius: 12,
+          padding: 15,
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+     },
+     patientRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+     },
+     patientImage: {
+          height: 50,
+          width: 50,
+          borderRadius: 25,
+          marginRight: 15,
+          backgroundColor: '#eee',
+     },
+     patientInfo: {
+          flex: 1,
+     },
+     patientName: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#333',
+     },
+     patientDetails: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.8),
+          color: '#666',
+     },
+     sectionHeader: {
+          marginHorizontal: 15,
+          marginTop: 20,
+          marginBottom: 10,
+     },
+     sectionTitle: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#333',
+          marginBottom: 5,
+     },
+     subtitle: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.6),
+          color: '#888',
+     },
+     prescriptionImage: {
+          height: responsiveScreenWidth(50),
+          width: '100%',
+          borderRadius: 8,
+          marginTop: 10,
+          backgroundColor: '#f0f0f0',
+     },
+     medicineCard: {
+          backgroundColor: '#fff',
+          marginHorizontal: 15,
+          marginBottom: 10,
+          borderRadius: 10,
+          padding: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          elevation: 1,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+     },
+     medicineImageContainer: {
+          height: 50,
+          width: 50,
+          borderRadius: 8,
+          backgroundColor: '#F5F5F5',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+     },
+     medicineImage: {
+          height: 40,
+          width: 40,
+          resizeMode: 'contain',
+     },
+     medicineDetails: {
+          flex: 1,
+          marginRight: 10,
+     },
+     medicineName: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(1.9),
+          color: '#333',
+          marginBottom: 4,
+     },
+     medicineDesc: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.6),
+          color: '#888',
+     },
+     checkboxContainer: {
+          padding: 5,
+     },
+     footerContainer: {
+          marginTop: 10,
+          marginBottom: 20,
+     },
+     addressSection: {
+          backgroundColor: '#fff',
+          marginHorizontal: 15,
+          borderRadius: 12,
+          padding: 15,
+          elevation: 2,
+     },
+     addressHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+     },
+     addressLabel: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#333',
+          marginLeft: 5,
+     },
+     changeBtn: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(1.6),
+          color: Colors.primary,
+     },
+     addressText: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.8),
+          color: '#555',
+          lineHeight: 22,
+     },
+     addressName: {
+          fontFamily: 'novabold',
+          color: '#333',
+     },
+     addAddressBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: 10,
+     },
+     addAddressText: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(1.8),
+          color: Colors.primary,
+          marginLeft: 8,
+     },
+     bottomBar: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderColor: '#eee',
+          paddingHorizontal: 20,
+          paddingVertical: 15,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          elevation: 10,
+     },
+     selectedCount: {
+          flex: 1,
+     },
+     selectedLabel: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#333',
+     },
+     proceedBtn: {
+          backgroundColor: Colors.primary || 'green',
+          paddingVertical: 12,
+          paddingHorizontal: 30,
+          borderRadius: 8,
+          elevation: 2,
+     },
+     proceedText: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#fff',
+     },
+     // Modal Styles
+     modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'flex-end',
+     },
+     modalContent: {
+          backgroundColor: '#fff',
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          height: '75%',
+          width: '100%',
+     },
+     modalHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: 20,
+          borderBottomWidth: 1,
+          borderBottomColor: '#eee',
+     },
+     modalTitle: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2.2),
+          color: '#333',
+     },
+     closeBtn: {
+          padding: 5,
+     },
+     modalBody: {
+          padding: 20,
+     },
+     locationBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#F0F7F4', // Light green bg
+          padding: 15,
+          borderRadius: 8,
+          marginBottom: 20,
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: '#D4E8DC',
+     },
+     locationBtnText: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(1.8),
+          color: Colors.primary,
+          marginLeft: 10,
+     },
+     inputGroup: {
+          marginBottom: 20,
+     },
+     inputLabel: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.7),
+          color: '#666',
+          marginBottom: 8,
+     },
+     input: {
+          borderWidth: 1,
+          borderColor: '#ddd',
+          borderRadius: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          fontSize: responsiveFontSize(1.8),
+          fontFamily: 'novaregular',
+          color: '#333',
+          backgroundColor: '#FAFAFA',
+     },
+     typeContainer: {
+          flexDirection: 'row',
+     },
+     typeBtn: {
+          paddingVertical: 8,
+          paddingHorizontal: 20,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: '#ddd',
+          marginRight: 12,
+          backgroundColor: '#fff',
+     },
+     typeBtnActive: {
+          borderColor: Colors.primary,
+          backgroundColor: Colors.primary,
+     },
+     typeText: {
+          fontFamily: 'novaregular',
+          fontSize: responsiveFontSize(1.7),
+          color: '#666',
+     },
+     typeTextActive: {
+          color: '#fff',
+          fontFamily: 'novabold',
+     },
+     modalFooter: {
+          padding: 20,
+          borderTopWidth: 1,
+          borderTopColor: '#eee',
+     },
+     saveBtn: {
+          backgroundColor: Colors.primary,
+          borderRadius: 10,
+          paddingVertical: 15,
+          alignItems: 'center',
+     },
+     saveBtnText: {
+          fontFamily: 'novabold',
+          fontSize: responsiveFontSize(2),
+          color: '#fff',
+     },
+});

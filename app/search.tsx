@@ -1,63 +1,186 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
     TextInput,
-    TouchableOpacity,
-    Image,
-    StatusBar
-} from 'react-native';
+import { TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import Colors from '../constants/Colors';
-
-const DUMMY_MEDICINES = [
-    { id: 1, name: 'Paracetamol 500mg', price: '₹20.00', discount: '10% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2020/10/YW/OY/XU/49579469/paracetamol-tablets-ip-500mg-500x500.jpg', category: 'Fever' },
-    { id: 2, name: 'Vitamin C Tablets', price: '₹150.00', discount: '5% OFF', image: 'https://m.media-amazon.com/images/I/71N7vj5cSXL._AC_UF1000,1000_QL80_.jpg', category: 'Supplement' },
-    { id: 3, name: 'Cough Syrup', price: '₹85.00', discount: '15% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2022/12/YI/QW/YE/37190933/herbal-cough-syrup-500x500.jpg', category: 'Syrup' },
-    { id: 4, name: 'Pain Relief Gel', price: '₹120.00', discount: '20% OFF', image: 'https://cdn01.pharmeasy.in/dam/products_otc/I40695/volini-pain-relief-gel-tube-of-75-g-2-1671743653.jpg', category: 'Pain Relief' },
-    { id: 5, name: 'Dolo 650', price: '₹30.00', discount: '10% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2023/7/322312675/GV/OW/ZS/192666504/dolo-650-tablet-500x500.jpg', category: 'Fever' },
-    { id: 6, name: 'Betadine Ointment', price: '₹110.00', discount: '5% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2023/5/306936324/EX/XM/SD/3414008/betadine-ointment-500x500.jpg', category: 'First Aid' },
-];
+import { ApiService } from '../services/api';
+import { useStore } from '../store/useStore';
 
 const Search = () => {
-    const [search, setSearch] = useState('');
-    const [filteredData, setFilteredData] = useState(DUMMY_MEDICINES);
+    const params = useLocalSearchParams();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [showFilter, setShowFilter] = useState(false);
+    const [sortBy, setSortBy] = useState<'default' | 'priceLowHigh' | 'priceHighLow'>('default');
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
+    const { addToCart } = useStore();
+
+    // Check if valid category search
+    const categoryParam = params.category as string | undefined;
+    const initialCategory = categoryParam ? categoryParam : '';
+
+    useEffect(() => {
+        if (initialCategory) {
+            setSearchQuery(initialCategory);
+            fetchData(1, true, initialCategory);
+        }
+    }, [initialCategory]);
 
     const handleSearch = (text: string) => {
-        setSearch(text);
-        if (text) {
-            const newData = DUMMY_MEDICINES.filter((item) => {
-                const itemData = item.name ? item.name.toUpperCase() : ''.toUpperCase();
-                const textData = text.toUpperCase();
-                return itemData.indexOf(textData) > -1;
-            });
-            setFilteredData(newData);
-        } else {
-            setFilteredData(DUMMY_MEDICINES);
+        setSearchQuery(text);
+    };
+
+    const performSearch = () => {
+        if (!searchQuery.trim()) return;
+        fetchData(1, true);
+    };
+
+    const fetchData = async (pageNum: number, reset: boolean = false, queryOverride?: string) => {
+        const query = queryOverride || searchQuery;
+        if (!query.trim()) return;
+
+        if (reset) {
+            setLoading(true);
+            setProducts([]);
+            setPage(1);
+            setHasMore(true);
+        }
+
+        try {
+            let newData: any[] = [];
+
+            // Determine if strict category search or general search
+            // If the query exactly matches the initial category parameter, treat it as category search
+            const isCategorySearch = initialCategory && initialCategory.toLowerCase() === query.toLowerCase();
+
+            if (isCategorySearch) {
+                // Category Search
+                const response = await ApiService.getMedicinesByCategory(query, pageNum);
+                if (response.status === 'success' && Array.isArray(response.data)) {
+                    newData = response.data;
+                    // Check if more pages exist based on limit (default 20)
+                    if (newData.length < 20) setHasMore(false);
+                } else {
+                    setHasMore(false);
+                }
+            } else {
+                // General Search
+                // Using new signature with page/limit
+                const response = await ApiService.searchMedicines(query, "721434", pageNum, 20);
+
+                if (Array.isArray(response)) {
+                    newData = response;
+                    if (newData.length < 20) setHasMore(false);
+                } else if (response && response.status === 'success' && Array.isArray(response.data)) {
+                    newData = response.data;
+                    if (newData.length < 20) setHasMore(false);
+                } else {
+                    setHasMore(false);
+                }
+            }
+
+            // Normalizing data fields if necessary
+            const normalizedData = newData.map(item => ({
+                ...item,
+                // Ensure common fields exist
+                manufacturer: item.company_name || item.companyname || item.mfr || '',
+                description: item.desc || item.description || '',
+                // Ensure numeric price for sorting
+                priceVal: parseFloat((item.price || '0').toString().replace(/[^0-9.]/g, ''))
+            }));
+
+            if (reset) {
+                setProducts(normalizedData);
+            } else {
+                setProducts(prev => {
+                    // Avoid duplicates if API returns overlapping data
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const uniqueNew = normalizedData.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...uniqueNew];
+                });
+            }
+
+            if (reset) setInitialLoadDone(true);
+
+            // Increment page for next load
+            if (hasMore) setPage(pageNum + 1);
+
+        } catch (error) {
+            console.log('Search fetch error', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
     };
+
+    const handleLoadMore = () => {
+        if (!loading && hasMore && products.length > 0) {
+            fetchData(page, false);
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        fetchData(1, true);
+    };
+
+    const applySort = (data: any[]) => {
+        if (sortBy === 'priceLowHigh') {
+            return [...data].sort((a, b) => a.priceVal - b.priceVal);
+        } else if (sortBy === 'priceHighLow') {
+            return [...data].sort((a, b) => b.priceVal - a.priceVal);
+        }
+        return data;
+    };
+
+    const sortedProducts = applySort(products);
 
     const renderItem = ({ item }: { item: any }) => (
         <TouchableOpacity
             style={styles.itemContainer}
+            activeOpacity={0.8}
             onPress={() => router.push({ pathname: 'product_details', params: item })}
         >
-            <Image source={{ uri: item.image }} style={styles.itemImage} resizeMode="contain" />
+            <FastImage
+                source={item.image ? { uri: item.image } : require('../assets/images/med.jpg')}
+                style={styles.itemImage}
+                resizeMode={FastImage.resizeMode.contain}
+            />
             <View style={styles.itemContent}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemCategory}>{item.category}</Text>
+                <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                <Text style={styles.itemCategory} numberOfLines={1}>
+                    {item.composition || item.category || 'Medicine'}
+                </Text>
                 <View style={styles.priceRow}>
-                    <Text style={styles.itemPrice}>{item.price}</Text>
-                    <View style={styles.discountBadge}>
-                        <Text style={styles.discountText}>{item.discount}</Text>
-                    </View>
+                    <Text style={styles.itemPrice}>₹{item.price}</Text>
+                    {item.discount > 0 ? (
+                        <View style={styles.discountBadge}>
+                            <Text style={styles.discountText}>{item.discount}% OFF</Text>
+                        </View>
+                    ) : null}
                 </View>
+                {item.manufacturer ? (
+                    <Text style={styles.companyName} numberOfLines={1}>{item.manufacturer}</Text>
+                ) : null}
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => addToCart({ id: item.id.toString(), name: item.name, price: item.price?.toString() || '0', image: item.image || '', quantity: 1, category: item.category })}
+            >
+                <Ionicons name="add" size={20} color={Colors.primary} />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 
@@ -75,30 +198,84 @@ const Search = () => {
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search medicines..."
-                        value={search}
+                        value={searchQuery}
                         onChangeText={handleSearch}
-                        autoFocus
+                        onSubmitEditing={performSearch}
+                        returnKeyType="search"
+                        autoFocus={!initialCategory}
                     />
-                    {search.length > 0 &&
-                        <TouchableOpacity onPress={() => handleSearch('')}>
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => { setSearchQuery(''); setProducts([]); setInitialLoadDone(false); }}>
                             <Ionicons name="close-circle" size={20} color="#999" />
                         </TouchableOpacity>
-                    }
+                    )}
                 </View>
+                <TouchableOpacity onPress={() => setShowFilter(!showFilter)} style={styles.filterBtn}>
+                    <Ionicons name="funnel-outline" size={22} color={Colors.primary} />
+                </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={filteredData}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderItem}
-                contentContainerStyle={{ padding: 15 }}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="search-outline" size={60} color="#ddd" />
-                        <Text style={styles.emptyText}>No medicines found matching "{search}"</Text>
-                    </View>
-                }
-            />
+            {/* Filter Options */}
+            {showFilter && (
+                <View style={styles.filterContainer}>
+                    <TouchableOpacity
+                        style={[styles.filterOption, sortBy === 'default' && styles.activeFilter]}
+                        onPress={() => setSortBy('default')}
+                    >
+                        <Text style={[styles.filterText, sortBy === 'default' && styles.activeFilterText]}>Relevance</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.filterOption, sortBy === 'priceLowHigh' && styles.activeFilter]}
+                        onPress={() => setSortBy('priceLowHigh')}
+                    >
+                        <Text style={[styles.filterText, sortBy === 'priceLowHigh' && styles.activeFilterText]}>Price: Low to High</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.filterOption, sortBy === 'priceHighLow' && styles.activeFilter]}
+                        onPress={() => setSortBy('priceHighLow')}
+                    >
+                        <Text style={[styles.filterText, sortBy === 'priceHighLow' && styles.activeFilterText]}>Price: High to Low</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {loading && page === 1 ? (
+                <View style={styles.emptyContainer}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={styles.emptyText}>Searching...</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={sortedProducts}
+                    keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                    renderItem={renderItem}
+                    contentContainerStyle={{ padding: 15, paddingBottom: 50 }}
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.5}
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    ListFooterComponent={
+                        loading && page > 1 ? (
+                            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+                        ) : null
+                    }
+                    ListEmptyComponent={
+                        initialLoadDone ? (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="search-outline" size={60} color="#ddd" />
+                                <Text style={styles.emptyText}>
+                                    {searchQuery ? `No medicines found matching "${searchQuery}"` : "Type to search for medicines"}
+                                </Text>
+                            </View>
+                        ) : (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="medical-outline" size={60} color="#ddd" />
+                                <Text style={styles.emptyText}>Type to search for medicines</Text>
+                            </View>
+                        )
+                    }
+                />
+            )}
         </View>
     );
 };
@@ -127,6 +304,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         height: 45,
+        marginRight: 10,
     },
     searchInput: {
         flex: 1,
@@ -134,6 +312,39 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         marginLeft: 10,
+    },
+    filterBtn: {
+        padding: 8,
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        backgroundColor: '#f9f9f9',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    filterOption: {
+        paddingHorizontal: 15,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        marginRight: 10,
+        backgroundColor: '#fff',
+    },
+    activeFilter: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    filterText: {
+        fontSize: 12,
+        fontFamily: 'novaregular',
+        color: '#555',
+    },
+    activeFilterText: {
+        color: '#fff',
+        fontFamily: 'novabold',
     },
     itemContainer: {
         flexDirection: 'row',
@@ -170,6 +381,12 @@ const styles = StyleSheet.create({
         color: '#999',
         marginBottom: 4,
     },
+    companyName: {
+        fontFamily: 'novaregular',
+        fontSize: 11,
+        color: '#888',
+        marginTop: 2,
+    },
     priceRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -185,6 +402,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4,
+        marginLeft: 8,
     },
     discountText: {
         fontFamily: 'novabold',
@@ -203,5 +421,15 @@ const styles = StyleSheet.create({
         color: '#999',
         marginTop: 20,
         textAlign: 'center',
+    },
+    addButton: {
+        width: 35,
+        height: 35,
+        borderRadius: 17.5,
+        backgroundColor: '#F0F9F4',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.primary,
     }
 });

@@ -40,8 +40,13 @@ export const ApiService = {
             throw e;
         }
     },
+    // 3. Categories
+    getCategories: async () => {
+        const response = await axios.get("medicine/get_categories.php");
+        return response.data;
+    },
 
-    // 3. Prescriptions
+    // 4. Prescriptions
     uploadPrescription: async (image: any, name: string, type: string) => {
         const formData = new FormData();
         // image should be file object or similar
@@ -60,13 +65,53 @@ export const ApiService = {
     },
 
     // 4. Medicine Search
-    searchMedicines: async (pincode: string, dataItems: { id: string }[]) => {
-        const medDetail = JSON.stringify({ pincode, data: dataItems });
+    // 4. Medicine Search
+    searchMedicines: async (query: string, pincode: string = '721434', page: number = 1, limit: number = 20) => {
         const formData = new FormData();
-        formData.append('medDetail', medDetail);
+        formData.append('query', query);
+        formData.append('pincode', pincode);
+        formData.append('page', page.toString());
+        formData.append('limit', limit.toString());
 
-        const response = await axios.post("medicine/search.php", formData);
-        return response.data;
+        try {
+            const response = await fetch("https://irhealthcareservice.com/app_api/v2/medicine/search.php", {
+                method: "POST",
+                body: formData,
+                redirect: "follow"
+            });
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.log("Search parse error", text);
+                return [];
+            }
+        } catch (error) {
+            console.error("Search fetch error", error);
+            throw error;
+        }
+    },
+
+    getMedicineById: async (id: number | string, pincode: string = '721434') => {
+        try {
+            const response = await fetch(`https://irhealthcareservice.com/app_api/v2/medicine/get_by_id.php?id=${id}&pincode=${pincode}`);
+            return await response.json();
+        } catch (error) {
+            console.error("Get medicine by id error", error);
+            throw error;
+        }
+    },
+
+    getMedicinesByCategory: async (category: string, page: number = 1, pincode: string = '721434') => {
+        try {
+            // Encode category to handle spaces and special chars
+            const encodedCategory = encodeURIComponent(category);
+            const response = await fetch(`https://irhealthcareservice.com/app_api/v2/medicine/get_by_category.php?category=${encodedCategory}&page=${page}&pincode=${pincode}`);
+            return await response.json();
+        } catch (error) {
+            console.error("Get medicines by category error", error);
+            return { status: 'error', data: [] };
+        }
     },
     // Old searchProducts wrapper?
     searchProducts: async (query: string) => {
@@ -160,6 +205,45 @@ export const ApiService = {
         const formData = new FormData();
         formData.append('id', id.toString());
         const response = await axios.post("address/delete_address.php", formData);
+        return response.data;
+    },
+
+    // 8. User Profile
+    uploadPhoto: async (imageUri: string) => {
+        const formData = new FormData();
+        const filename = imageUri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image`;
+
+        formData.append('photo', {
+            uri: imageUri,
+            name: filename,
+            type: type,
+        } as any);
+
+        const response = await axios.post("user/upload_photo.php", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            }
+        });
+        return response.data;
+    },
+
+    getUser: async () => {
+        const response = await axios.get("user/get_user.php");
+        return response.data;
+    },
+
+    updateEmail: async (email: string) => {
+        // The API expects application/x-www-form-urlencoded
+        const params = new URLSearchParams();
+        params.append('email', email);
+
+        const response = await axios.post("user/update_email.php", params.toString(), {
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        });
         return response.data;
     }
 };

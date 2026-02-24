@@ -54,6 +54,8 @@ web-build/
 *.p12
 *.key
 *.mobileprovision
+#backend code
+backend-code/
 
 # Metro
 .metro-health-check*

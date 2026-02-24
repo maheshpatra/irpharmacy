@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ApiService } from '../services/api';
 
 interface UserState {
     user: any | null;
@@ -27,7 +28,23 @@ interface CartState {
     cartTotal: () => number;
 }
 
-export const useStore = create<UserState & CartState>()(
+interface Address {
+    id: string;
+    label: string; // e.g. Home, Work
+    details: string; // Full address string
+    coordinates?: {
+        latitude: number;
+        longitude: number;
+    };
+}
+
+interface AddressState {
+    addresses: Address[];
+    addAddress: (address: Address) => void;
+    removeAddress: (id: string) => void;
+}
+
+export const useStore = create<UserState & CartState & AddressState>()(
     persist(
         (set, get) => ({
             // User State
@@ -38,29 +55,57 @@ export const useStore = create<UserState & CartState>()(
 
             // Cart State
             cart: [],
-            addToCart: (item) => set((state) => {
-                const existing = state.cart.find((c) => c.id === item.id);
-                if (existing) {
-                    return {
-                        cart: state.cart.map((c) =>
-                            c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-                        ),
-                    };
+            addToCart: async (item) => {
+                try {
+                    await ApiService.addToCart(parseInt(item.id), item.quantity || 1);
+                    set((state) => {
+                        const existing = state.cart.find((c) => c.id === item.id);
+                        if (existing) {
+                            return {
+                                cart: state.cart.map((c) =>
+                                    c.id === item.id ? { ...c, quantity: c.quantity + (item.quantity || 1) } : c
+                                ),
+                            };
+                        }
+                        return { cart: [...state.cart, { ...item, quantity: item.quantity || 1 }] };
+                    });
+                } catch (error) {
+                    console.error("Cart Add Error", error);
                 }
-                return { cart: [...state.cart, { ...item, quantity: 1 }] };
-            }),
-            removeFromCart: (id) => set((state) => ({
-                cart: state.cart.filter((c) => c.id !== id),
-            })),
-            updateQuantity: (id, delta) => set((state) => ({
-                cart: state.cart.map((c) => {
-                    if (c.id === id) {
-                        const newQuantity = Math.max(0, c.quantity + delta);
-                        return { ...c, quantity: newQuantity };
+            },
+            removeFromCart: async (id) => {
+                try {
+                    await ApiService.removeFromCart(parseInt(id));
+                    set((state) => ({
+                        cart: state.cart.filter((c) => c.id !== id),
+                    }));
+                } catch (error) {
+                    console.error("Cart Remove Error", error);
+                }
+            },
+            updateQuantity: async (id, delta) => {
+                const item = get().cart.find(c => c.id === id);
+                if (item) {
+                    const newQty = Math.max(0, item.quantity + delta);
+                    try {
+                        if (newQty === 0) {
+                            await ApiService.removeFromCart(parseInt(id));
+                        } else {
+                            await ApiService.updateCart(parseInt(id), newQty);
+                        }
+                        set((state) => ({
+                            cart: state.cart.map((c) => {
+                                if (c.id === id) {
+                                    return { ...c, quantity: newQty };
+                                }
+                                return c;
+                            }).filter((c) => c.quantity > 0)
+                        }));
+                    } catch (error) {
+                        console.error("Cart Update Error", error);
                     }
-                    return c;
-                }).filter((c) => c.quantity > 0)
-            })),
+                }
+            },
             clearCart: () => set({ cart: [] }),
             cartTotal: () => {
                 const cart = get().cart;
@@ -70,6 +115,11 @@ export const useStore = create<UserState & CartState>()(
                     return total + (price * item.quantity);
                 }, 0);
             },
+
+            // Address State
+            addresses: [],
+            addAddress: (address) => set((state) => ({ addresses: [...state.addresses, address] })),
+            removeAddress: (id) => set((state) => ({ addresses: state.addresses.filter((a) => a.id !== id) })),
         }),
         {
             name: 'app-storage', // unique name

@@ -52,17 +52,17 @@ instance.interceptors.response.use(
                     body: formData,
                 });
 
-                const data = await response.json();
+                const payload = await response.json();
 
-                if (data.status === 'success' && data.access_token) {
+                if (payload.status === 'success' && payload.data && payload.data.access_token) {
                     // Update tokens
-                    await _storeData('ACCESS_TOKEN', data.access_token);
-                    if (data.refresh_token) {
-                        await _storeData('REFRESH_TOKEN', data.refresh_token);
+                    await _storeData('ACCESS_TOKEN', payload.data.access_token);
+                    if (payload.data.refresh_token) {
+                        await _storeData('REFRESH_TOKEN', payload.data.refresh_token);
                     }
 
                     // Retry original request with new token
-                    originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+                    originalRequest.headers.Authorization = `Bearer ${payload.data.access_token}`;
                     return instance(originalRequest);
                 } else {
                     throw new Error("Refresh token retrieval failed");
@@ -72,7 +72,7 @@ instance.interceptors.response.use(
                 await _removeData('ACCESS_TOKEN');
                 await _removeData('REFRESH_TOKEN');
                 await _removeData('USER_DATA');
-                router.replace('/login');
+                router.replace('/');
                 return Promise.reject(err);
             }
         }

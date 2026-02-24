@@ -11,7 +11,8 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
-  Dimensions
+  Dimensions,
+  Linking
 } from 'react-native';
 import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { useEffect, useState } from 'react';
@@ -23,8 +24,9 @@ import { useStore } from '../../store/useStore';
 import { Ionicons, FontAwesome, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../../constants/Colors';
-import { _retrieveData } from '../../local_storage';
+import { _retrieveData, _storeData } from '../../local_storage';
 import { Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +49,7 @@ const DUMMY_CATEGORIES = [
 
 const Home = () => {
   const { StatusBarManager } = NativeModules;
+  const insets = useSafeAreaInsets();
   // const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 40 : StatusBarManager.HEIGHT;
   const { username, setUser, addToCart, cart } = useStore();
 
@@ -62,17 +65,46 @@ const Home = () => {
   }, []);
 
   const loadUser = async () => {
-    const userData = await _retrieveData('USER_DATA');
+    let userData = await _retrieveData('USER_DATA');
     if (userData) {
       setUser(userData);
+    }
+    try {
+      const response = await ApiService.getUser();
+      if (response && response.status === 'success' && response.data) {
+        const freshUser = {
+          ...userData,
+          userid: response.data.id,
+          username: response.data.name,
+          mobile: response.data.mobile,
+          email: response.data.email,
+          profile_image: response.data.photo ? `https://irhealthcareservice.com/app_api/${response.data.photo}` : null
+        };
+        setUser(freshUser);
+        await _storeData('USER_DATA', freshUser);
+      }
+    } catch (error) {
+      console.log("Error fetching user data", error);
     }
   };
 
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const bannerData = await ApiService.getBanners();
-      setdata(bannerData);
+      const bannerData = await ApiService.getBanners('top');
+      let formattedBanners = [];
+
+      if (bannerData?.status === 'success' && bannerData?.data && Array.isArray(bannerData.data)) {
+        formattedBanners = bannerData.data.map((item: any) => ({
+          ...item,
+          img: item.image_url ? `https://irhealthcareservice.com/app_api/${item.image_url}` : '',
+          link: item.click_url || item.image_link || ''
+        }));
+      } else if (bannerData?.banner && Array.isArray(bannerData.banner)) {
+        formattedBanners = bannerData.banner;
+      }
+
+      setdata({ banner: formattedBanners });
     } catch (e) {
       console.log("Banner Fetch Error", e);
     } finally {
@@ -82,12 +114,27 @@ const Home = () => {
 
   const fetchTabs = async () => {
     try {
-      const tabsData = await ApiService.getHomeTabs();
-      if (tabsData && tabsData.tabs && tabsData.tabs.length > 0) {
-        settabdata(tabsData.tabs);
+      const categoriesResponse = await ApiService.getCategories();
+      if (categoriesResponse.status === 'success' && Array.isArray(categoriesResponse.data)) {
+        const mappedCategories = categoriesResponse.data.map((catName: string, index: number) => {
+          let imageUrl = 'https://cdn-icons-png.flaticon.com/512/2965/2965386.png'; // Default
+          const lowerName = catName.toLowerCase();
+
+          if (lowerName.includes('food')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2821/2821901.png';
+          else if (lowerName.includes('medicine')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2554/2554245.png';
+          else if (lowerName.includes('otc')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2821/2821804.png';
+          else if (lowerName.includes('surgical')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/3004/3004458.png';
+
+          return {
+            id: index + 1,
+            name: catName,
+            url: imageUrl
+          };
+        });
+        settabdata(mappedCategories);
       }
     } catch (e) {
-      console.log('Error fetching tabs, using dummy data', e);
+      console.log('Error fetching categories, using dummy data', e);
     }
   };
 
@@ -226,7 +273,7 @@ const Home = () => {
     <TouchableOpacity
       activeOpacity={0.8}
       style={styles.medicineCard}
-      onPress={() => router.push({ pathname: 'product_details', params: item })}
+      onPress={() => router.push({ pathname: '/product_details', params: item })}
     >
       <View style={styles.discountTag}>
         <Text style={styles.discountText}>{item.discount}</Text>
@@ -246,7 +293,9 @@ const Home = () => {
   );
 
   const renderCategoryItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.categoryItem} activeOpacity={0.7}>
+    <TouchableOpacity
+      onPress={() => router.push({ pathname: 'search', params: { category: item.name } })}
+      style={styles.categoryItem} activeOpacity={0.7}>
       <View style={styles.categoryIconContainer}>
         <Image source={{ uri: item.url }} style={styles.categoryIcon} resizeMode="contain" />
       </View>
@@ -256,7 +305,7 @@ const Home = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" style="dark" />
+      <StatusBar translucent={false} backgroundColor="#ffffff" style="dark" />
 
       {renderLocationHeader()}
       <ScrollView
@@ -282,7 +331,7 @@ const Home = () => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Shop by Category</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('categories')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -359,7 +408,7 @@ const styles = StyleSheet.create({
   topHeaderContainer: {
     paddingHorizontal: 20,
     backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingTop: Platform.OS === 'ios' ? 50 : 10,
     paddingBottom: 10,
     zIndex: 101,
   },

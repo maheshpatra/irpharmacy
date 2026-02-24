@@ -7,7 +7,8 @@ import {
     ScrollView,
     TouchableOpacity,
     StatusBar,
-    Dimensions
+    Dimensions,
+    ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
@@ -15,24 +16,67 @@ import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } fro
 import Colors from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { ApiService } from '../services/api';
+
 const { width } = Dimensions.get('window');
 
 const ProductDetails = () => {
     const params = useLocalSearchParams();
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('About');
+    const [fetchedProduct, setFetchedProduct] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
 
-    // Dummy data if params are missing (for dev preview)
-    const product = {
-        name: params.name || 'Paracetamol 500mg',
-        price: params.price || '₹20.00',
-        image: params.image || 'https://5.imimg.com/data5/SELLER/Default/2020/10/YW/OY/XU/49579469/paracetamol-tablets-ip-500mg-500x500.jpg',
-        description: 'Paracetamol is a common painkiller used to treat aches and pain. It can also be used to reduce a high temperature.',
-        dosage: 'Take 1 tablet every 4-6 hours as needed. Do not exceed 4 tablets in 24 hours.',
-        sideEffects: 'Nausea, allergic reactions, liver damage (in higher doses).',
+    // Initial product data from params
+    const initialProduct = {
+        id: params.id,
+        name: params.name || '',
+        price: params.price || '',
+        image: params.image || 'https://cdn-icons-png.flaticon.com/512/2965/2965386.png',
+        description: params.desc || params.description || '',
+        dosage: 'As prescribed by the physician.',
+        sideEffects: 'Consult your doctor.',
         rating: 4.5,
         reviews: 120,
-        category: params.category || 'Fever',
+        category: params.category || 'Medicine',
+        composition: params.composition || '',
+        manufacturer: (params.company_name || params.companyname || params.mfr || params.manufacturer) ? `Mkt: ${params.company_name || params.companyname || params.mfr || params.manufacturer}` : '',
+        stockStatus: 'available',
+        discount: params.discount ? parseInt(params.discount as string) : 0,
+        availableQty: 10 // Default until fetched
+    };
+
+    const product = fetchedProduct ? { ...initialProduct, ...fetchedProduct } : initialProduct;
+
+    React.useEffect(() => {
+        if (params.id) {
+            fetchProductDetails(params.id as string);
+        }
+    }, [params.id]);
+
+    const fetchProductDetails = async (id: string) => {
+        setLoading(true);
+        try {
+            const response = await ApiService.getMedicineById(id);
+            if (response.status === 'success' && response.data) {
+                const data = response.data;
+                setFetchedProduct({
+                    name: data.name,
+                    price: `₹${data.price}`,
+                    description: data.desc,
+                    category: data.category,
+                    composition: data.composition,
+                    manufacturer: data.company_name ? `Mkt: ${data.company_name}` : '',
+                    stockStatus: data.status, // "out_of_stock" or "available"
+                    availableQty: data.aviqty,
+                    discount: data.discount || 0
+                });
+            }
+        } catch (error) {
+            console.log("Error fetching product details", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -50,85 +94,142 @@ const ProductDetails = () => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                {/* Product Image */}
-                <View style={styles.imageContainer}>
-                    <Image source={{ uri: product.image as string }} style={styles.productImage} resizeMode="contain" />
+            {loading || !product.name ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
                 </View>
-
-                {/* Info Container */}
-                <View style={styles.infoContainer}>
-                    <View style={styles.titleRow}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.categoryText}>{product.category}</Text>
-                            <Text style={styles.productName}>{product.name}</Text>
+            ) : (
+                <>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                        {/* Product Image */}
+                        <View style={styles.imageContainer}>
+                            <Image source={{ uri: product.image as string }} style={styles.productImage} resizeMode="contain" />
                         </View>
-                        <View style={styles.ratingBadge}>
-                            <FontAwesome name="star" size={14} color="#fff" />
-                            <Text style={styles.ratingText}>{product.rating}</Text>
+
+                        {/* Info Container */}
+                        <View style={styles.infoContainer}>
+                            <View style={styles.titleRow}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.categoryText}>{product.category}</Text>
+                                    <Text style={styles.productName}>{product.name}</Text>
+                                    <Text style={styles.compositionText}>{product.composition}</Text>
+                                </View>
+                                <View style={styles.ratingBadge}>
+                                    <FontAwesome name="star" size={12} color="#fff" />
+                                    <Text style={styles.ratingText}>{product.rating}</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.manufacturer}>{product.manufacturer}</Text>
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={styles.reviewCount}>({product.reviews} verified ratings)</Text>
+                                {product.stockStatus === 'out_of_stock' || product.availableQty === 0 ? (
+                                    <Text style={{ color: 'red', fontFamily: 'novabold', fontSize: 12 }}>Out of Stock</Text>
+                                ) : (
+                                    <Text style={{ color: 'green', fontFamily: 'novabold', fontSize: 12 }}>In Stock</Text>
+                                )}
+                            </View>
+
+                            <View style={styles.priceRow}>
+                                <View>
+                                    {product.price && (
+                                        <>
+                                            {product.discount > 0 && (
+                                                <Text style={styles.mrpText}>MRP <Text style={{ textDecorationLine: 'line-through' }}>
+                                                    ₹{(parseFloat(product.price.toString().replace(/[^0-9.]/g, '')) * (100 / (100 - product.discount))).toFixed(2)}
+                                                </Text> <Text style={{ color: 'green', marginLeft: 5 }}>{product.discount}% OFF</Text></Text>
+                                            )}
+                                            <Text style={styles.price}>{product.price}</Text>
+                                            <Text style={styles.taxText}>Inclusive of all taxes</Text>
+                                        </>
+                                    )}
+                                </View>
+                                {product.stockStatus !== 'out_of_stock' && product.availableQty !== 0 && (
+                                    <View style={styles.quantityControl}>
+                                        <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}>
+                                            <Ionicons name="remove" size={18} color="#555" />
+                                        </TouchableOpacity>
+                                        <Text style={styles.qtyText}>{quantity}</Text>
+                                        <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}>
+                                            <Ionicons name="add" size={18} color="#555" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Divider */}
+                            <View style={styles.divider} />
+
+                            {/* Description Tabs */}
+                            <View style={styles.tabContainer}>
+                                {['About', 'Dosage', 'Side Effects'].map((tab) => (
+                                    <TouchableOpacity
+                                        key={tab}
+                                        onPress={() => setActiveTab(tab)}
+                                        style={[styles.tabBtn, activeTab === tab && styles.activeTabBtn]}
+                                    >
+                                        <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <View style={styles.tabContent}>
+                                {activeTab === 'About' && <Text style={styles.contentText}>{product.description}</Text>}
+                                {activeTab === 'Dosage' && <Text style={styles.contentText}>{product.dosage}</Text>}
+                                {activeTab === 'Side Effects' && <Text style={styles.contentText}>{product.sideEffects}</Text>}
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            <View style={styles.safetyContainer}>
+                                <Text style={styles.sectionHeader}>Safety Advice</Text>
+                                <View style={styles.safetyItem}>
+                                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3004/3004458.png' }} style={styles.safetyIcon} />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.safetyTitle}>Alcohol</Text>
+                                        <Text style={styles.safetyDesc}>Unsafe. Avoid alcohol consumption while taking this medication.</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.safetyItem}>
+                                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2821/2821901.png' }} style={styles.safetyIcon} />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.safetyTitle}>Pregnancy</Text>
+                                        <Text style={styles.safetyDesc}>Consult your doctor. Limited data available.</Text>
+                                    </View>
+                                </View>
+                            </View>
+
                         </View>
-                    </View>
+                    </ScrollView>
 
-                    <Text style={styles.reviewCount}>({product.reviews} Reviews)</Text>
-
-                    <View style={styles.priceRow}>
-                        <Text style={styles.price}>{product.price}</Text>
-                        <View style={styles.quantityControl}>
-                            <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}>
-                                <Ionicons name="remove" size={18} color="#555" />
-                            </TouchableOpacity>
-                            <Text style={styles.qtyText}>{quantity}</Text>
-                            <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}>
-                                <Ionicons name="add" size={18} color="#555" />
-                            </TouchableOpacity>
+                    {/* Bottom Action Bar */}
+                    <View style={styles.bottomBar}>
+                        <View style={styles.totalContainer}>
+                            <Text style={styles.totalLabel}>Total Price</Text>
+                            <Text style={styles.totalPrice}>
+                                ₹{(parseFloat(product.price.toString().replace(/[^0-9.]/g, '')) * quantity).toFixed(2)}
+                            </Text>
                         </View>
-                    </View>
-
-                    {/* Divider */}
-                    <View style={styles.divider} />
-
-                    {/* Description Tabs */}
-                    <View style={styles.tabContainer}>
-                        {['About', 'Dosage', 'Side Effects'].map((tab) => (
-                            <TouchableOpacity
-                                key={tab}
-                                onPress={() => setActiveTab(tab)}
-                                style={[styles.tabBtn, activeTab === tab && styles.activeTabBtn]}
+                        <TouchableOpacity
+                            style={[styles.addToCartBtn, (product.stockStatus === 'out_of_stock' || product.availableQty === 0) && { opacity: 0.5 }]}
+                            disabled={product.stockStatus === 'out_of_stock' || product.availableQty === 0}
+                        >
+                            <LinearGradient
+                                colors={product.stockStatus === 'out_of_stock' || product.availableQty === 0 ? ['#ccc', '#ccc'] : [Colors.primary, '#7C9644']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.gradientBtn}
                             >
-                                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-                            </TouchableOpacity>
-                        ))}
+                                <Ionicons name="cart" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Text style={styles.btnText}>
+                                    {product.stockStatus === 'out_of_stock' || product.availableQty === 0 ? 'Out of Stock' : 'Add to Cart'}
+                                </Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
                     </View>
-
-                    <View style={styles.tabContent}>
-                        {activeTab === 'About' && <Text style={styles.contentText}>{product.description}</Text>}
-                        {activeTab === 'Dosage' && <Text style={styles.contentText}>{product.dosage}</Text>}
-                        {activeTab === 'Side Effects' && <Text style={styles.contentText}>{product.sideEffects}</Text>}
-                    </View>
-
-                </View>
-            </ScrollView>
-
-            {/* Bottom Action Bar */}
-            <View style={styles.bottomBar}>
-                <View style={styles.totalContainer}>
-                    <Text style={styles.totalLabel}>Total Price</Text>
-                    <Text style={styles.totalPrice}>
-                        ₹{(parseFloat(product.price.toString().replace('₹', '')) * quantity).toFixed(2)}
-                    </Text>
-                </View>
-                <TouchableOpacity style={styles.addToCartBtn}>
-                    <LinearGradient
-                        colors={[Colors.primary, '#7C9644']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.gradientBtn}
-                    >
-                        <Ionicons name="cart" size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.btnText}>Add to Cart</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
+                </>
+            )}
 
         </View>
     );
@@ -333,4 +434,61 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#fff',
     },
+    compositionText: {
+        fontSize: 12,
+        color: '#666',
+        fontFamily: 'novaregular',
+        marginBottom: 4,
+    },
+    manufacturer: {
+        fontSize: 12,
+        color: '#888',
+        fontFamily: 'novabold',
+        marginBottom: 8,
+    },
+    mrpText: {
+        fontSize: 12,
+        color: '#999',
+        fontFamily: 'novaregular',
+        marginBottom: 2
+    },
+    taxText: {
+        fontSize: 10,
+        color: '#999',
+        fontFamily: 'novaregular',
+    },
+    safetyContainer: {
+        marginTop: 10,
+    },
+    sectionHeader: {
+        fontSize: 16,
+        fontFamily: 'novabold',
+        color: '#333',
+        marginBottom: 15,
+    },
+    safetyItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        borderRadius: 12,
+    },
+    safetyIcon: {
+        width: 32,
+        height: 32,
+        marginRight: 15,
+    },
+    safetyTitle: {
+        fontSize: 14,
+        fontFamily: 'novabold',
+        color: '#333',
+        marginBottom: 2,
+    },
+    safetyDesc: {
+        fontSize: 12,
+        fontFamily: 'novaregular',
+        color: '#666',
+        marginTop: 1,
+    }
 });

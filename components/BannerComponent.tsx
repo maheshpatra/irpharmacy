@@ -1,8 +1,8 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { View, FlatList, Dimensions, StyleSheet, TouchableOpacity, Pressable,Image } from 'react-native';
+import { View, FlatList, Dimensions, StyleSheet, TouchableOpacity, Pressable, Image, Linking } from 'react-native';
 import { responsiveHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions';
- // Import Image from expo-image
+// Import Image from expo-image
 
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = width * 0.9;
@@ -62,10 +62,12 @@ const BannerComponent = ({ images, h }) => {
 
     const renderItem = ({ item }) => (
         <Pressable onPress={() => {
-
+            if (item.link) {
+                Linking.openURL(item.link).catch(err => console.error("Couldn't load page", err));
+            }
         }} style={[styles.imageContainer, { height: h }]}>
             <Image
-                source={{ uri: item.img}}
+                source={{ uri: item.img }}
                 style={styles.image}
                 resizeMode='stretch'
             />

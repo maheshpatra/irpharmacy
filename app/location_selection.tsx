@@ -7,15 +7,17 @@ import {
     TouchableOpacity,
     Dimensions,
     ActivityIndicator,
-    Alert
+    Alert,
+    TextInput
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { responsiveFontSize, responsiveScreenHeight } from 'react-native-responsive-dimensions';
 import Colors from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useStore } from '../store/useStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -61,14 +63,28 @@ const LocationSelection = () => {
         })();
     }, []);
 
+    const params = useLocalSearchParams(); // Ensure useLocalSearchParams is imported
+    const source = params.source;
+    const addAddress = useStore((state) => state.addAddress); // Ensure useStore is imported
+    const [tag, setTag] = useState("Home");
+
     const handleConfirm = () => {
+        if (source === 'addresses' && address) {
+            addAddress({
+                id: Date.now().toString(),
+                label: tag,
+                details: address,
+                coordinates: location
+            });
+            Alert.alert("Success", "Address saved successfully!");
+        }
         // In a real app, save address to context/storage
         router.back();
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" transparent={true} />
+            <StatusBar barStyle="dark-content" translucent={true} />
 
             {/* Map View */}
             {location ? (
@@ -110,6 +126,19 @@ const LocationSelection = () => {
                         </Text>
                     </View>
                 </View>
+
+                {source === 'addresses' && (
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Save As (e.g. Home, Work)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Home, Work, Other"
+                            value={tag}
+                            onChangeText={setTag}
+                            placeholderTextColor="#999"
+                        />
+                    </View>
+                )}
 
                 <TouchableOpacity onPress={handleConfirm} style={styles.confirmBtn}>
                     <LinearGradient
@@ -231,4 +260,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#fff',
     },
+    inputContainer: {
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontFamily: 'novabold',
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 8,
+        marginLeft: 5,
+    },
+    input: {
+        backgroundColor: '#f9f9f9',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        height: 50,
+        fontFamily: 'novaregular',
+        fontSize: 16,
+        color: '#333',
+        borderWidth: 1,
+        borderColor: '#eee',
+    }
 });

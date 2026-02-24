@@ -8,6 +8,7 @@ import axios from '../../helper';
 import Colors from '../../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DUMMY_PRESCRIPTIONS = [
   { id: '1', name: 'Prescription #1023', date: '12 Feb 2024', status: 'Pending', image: 'https://cdn-icons-png.flaticon.com/512/2965/2965386.png', medicine_count: 3 },
@@ -19,7 +20,7 @@ const Prescription = () => {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [prescriptions, setPrescriptions] = useState<any[]>([])
-
+  const insets = useSafeAreaInsets();
   useFocusEffect(
     useCallback(() => {
       // Re-fetch when screen focuses
@@ -121,11 +122,9 @@ const Prescription = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
       <LinearGradient
         colors={[Colors.primary, '#599C88']}
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
         <Text style={styles.headerTitle}>My Prescriptions</Text>
@@ -171,11 +170,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 25,
+    paddingBottom: 10,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
