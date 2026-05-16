@@ -53,6 +53,7 @@
     "react-native-screens": "~3.22.0",
     "react-native-skeleton-placeholder": "^5.2.4",
     "react-native-tab-view": "^3.5.2",
+    "react-native-webview": "13.6.4",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

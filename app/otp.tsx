@@ -3,7 +3,6 @@ import {
   Text,
   View,
   StatusBar,
-  Alert,
   ActivityIndicator,
   Image,
   TouchableOpacity,
@@ -23,6 +22,7 @@ import axios from '../helper';
 import { responsiveFontSize, responsiveScreenWidth, responsiveScreenHeight } from "react-native-responsive-dimensions";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from 'expo-linear-gradient';
+import { showAlert } from '../components/CustomAlert';
 
 const Otp = () => {
   const { mobile, newuser } = useLocalSearchParams();
@@ -60,7 +60,6 @@ const Otp = () => {
         if (data.data.user && data.data.user.name) {
           const KEY = 'USER_DATA';
           var udata = { username: data.data.user.name, userid: data.data.user.id, mobile: data.data.user.mobile };
-          console.log(udata);
           await _storeData(KEY, udata);
           setLoading(false);
           router.replace('/tabs');
@@ -72,7 +71,6 @@ const Otp = () => {
         ToastAndroid.show(data.message, ToastAndroid.SHORT);
       }
     } catch (err) {
-      console.log(JSON.stringify(err, null, 2));
       ToastAndroid.show("Verification failed. Please try again.", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
@@ -157,7 +155,7 @@ const Otp = () => {
           {/* Resend */}
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn't receive the code? </Text>
-            <TouchableOpacity onPress={() => Alert.alert('Resend Code', 'Resend OTP functionality coming soon!')}>
+            <TouchableOpacity onPress={() => showAlert({ type: 'info', title: 'Resend Code', message: 'Resend OTP functionality coming soon!' })}>
               <Text style={styles.resendLink}>Resend</Text>
             </TouchableOpacity>
           </View>

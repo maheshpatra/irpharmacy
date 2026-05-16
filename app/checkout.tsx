@@ -1,513 +1,1245 @@
-import { View, ScrollView, Text, FlatList, Image, TouchableOpacity, Alert, Modal, TextInput, ToastAndroid } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import HeaderAB from '../components/HeaderAB'
-import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth, responsiveScreenFontSize } from 'react-native-responsive-dimensions'
-import RazorpayCheckout from 'react-native-razorpay';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Colors from '../constants/Colors';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+    View, Text, StyleSheet, ScrollView, TouchableOpacity,
+    Image, ActivityIndicator, StatusBar, ToastAndroid, Modal, TextInput
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { _retrieveData, _storeData } from '../local_storage';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Colors from '../constants/Colors';
+import { useStore } from '../store/useStore';
+import { _retrieveData } from '../local_storage';
+import { showAlert } from '../components/CustomAlert';
 import axios from '../helper';
+import RazorpayCheckout from 'react-native-razorpay';
+import { WebView } from 'react-native-webview';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface CheckoutItem {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    quantity: number;
+    discount?: number;
+    gst?: number;
+    status?: string;
+}
+
 export default function Checkout() {
-  const params = useLocalSearchParams()
-  const [data, setData] = useState<any>(null)
-  const [items, setItems] = useState<any[] | null>(null);
-  const [pdata, setpdata] = useState(null);
-  const [status, setStatus] = useState(null);
-  const [address, setaddress] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [name, setName] = useState(null);
-  const [id, setid] = useState(null);
-  const [fulladd, setfulladd] = useState(null);
-  const [discount, setdiscount] = useState(0);
-  const [total, settotal] = useState(0);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [pin, setpin] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('cod')
-  const selectedAddres = params
-  const [recipt, setrecipt] = useState(null);
-  const [num, setnum] = useState();
-  useEffect(() => {
+    const insets = useSafeAreaInsets();
+    const params = useLocalSearchParams();
+    const { cart, user, clearCart, addresses, selectedAddress, setSelectedAddress, fetchAddresses: storeFetchAddresses } = useStore();
 
-    _retrieveData("MED").then((mdata) => {
-      console.log(mdata);
-      if (mdata && mdata !== 'error') {
-        setItems(mdata.medicine)
-        setpdata(mdata.pdata)
-        setaddress(mdata.address.address)
-        console.log(mdata.medicine)
-        setid(mdata.pid)
-        console.log(mdata.pid)
-        setdiscount(mdata.discount ? mdata.discount : 0)
-      } else {
+    // ── State ────────────────────────────────────────────────────────────────
+    const [items, setItems] = useState<CheckoutItem[]>([]);
+    const [userData, setUserData] = useState<any>(null);
+    const [address, setAddress] = useState<string>('');
+    const [prescriptionId, setPrescriptionId] = useState<string | null>(null);
+    const [pdata, setPdata] = useState<any>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'rpay' | 'payu'>('cod');
+    const [payuWebViewVisible, setPayuWebViewVisible] = useState(false);
+    const [payuHtml, setPayuHtml] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [isPrescriptionFlow, setIsPrescriptionFlow] = useState(false);
+    const [addressList, setAddressList] = useState<any[]>([]);
+    const [addressModalVisible, setAddressModalVisible] = useState(false);
+    const [newAddress, setNewAddress] = useState({ pname: '', usermob: '', address: '' });
+    const [patientDetails, setPatientDetails] = useState({ p_name: '', age: '', gender: 'Male' });
 
-        Alert.alert('Error', 'user not found!')
-      }
-    });
-  }, [])
-  useEffect(() => {
-    _retrieveData("USER_DATA").then((udata) => {
-      if (udata && udata !== 'error') {
-        setData(udata)
-        console.log(udata)
-      } else {
-        Alert.alert('Error', 'user not found!')
-      }
-    });
-  }, [])
+    // ── Load data ─────────────────────────────────────────────────────────────
+    useEffect(() => {
+        // Try prescription (MED) flow first
+        _retrieveData('MED').then((mdata) => {
+            if (mdata && mdata !== 'error' && mdata.medicine) {
+                // Prescription flow
+                setIsPrescriptionFlow(true);
+                const mapped: CheckoutItem[] = mdata.medicine.map((m: any) => ({
+                    id: String(m.id),
+                    name: m.name,
+                    price: Number(m.price ?? 0),
+                    image: m.image || '',
+                    quantity: Number(m.qty ?? 1),
+                    discount: Number(m.discount ?? 0),
+                    gst: Number(m.gst ?? 0),
+                    status: m.status,
+                }));
+                setItems(mapped);
+                
+                // Map prescription pdata to our local state
+                if (mdata.pdata) {
+                    const pd = mdata.pdata;
+                    setPatientDetails({
+                        p_name: pd.name || pd.p_name || '',
+                        age: String(pd.age || ''),
+                        gender: pd.gender || 'Male'
+                    });
+                    setPdata(pd);
+                }
+                
+                setPrescriptionId(mdata.pid ?? null);
+                if (mdata.address?.address) setAddress(mdata.address.address);
+            } else {
+                // Cart flow — use Zustand store
+                setIsPrescriptionFlow(false);
+                const mapped: CheckoutItem[] = cart.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    price: parseFloat(String(c.price).replace(/[^0-9.]/g, '')) || 0,
+                    image: c.image || '',
+                    quantity: c.quantity,
+                    discount: 0,
+                    gst: 0,
+                    status: 'available',
+                }));
+                setItems(mapped);
+                
+                // For cart flow, default patient info from user profile
+                if (user) {
+                    const initialPatient = { p_name: user.name || user.username || '', age: '', gender: 'Male' };
+                    setPatientDetails(initialPatient);
+                    setPdata({ ...initialPatient, address: address });
+                }
+            }
+        });
 
+        // Load user data
+        _retrieveData('USER_DATA').then((udata) => {
+            if (udata && udata !== 'error') {
+                setUserData(udata);
+                // Fetch addresses from store (which syncs with server)
+                storeFetchAddresses();
+                fetchAddresses();
+                if (!isPrescriptionFlow && !patientDetails.p_name) {
+                    setPatientDetails(prev => ({ ...prev, p_name: udata.name || udata.username || '' }));
+                }
+            } else if (user) {
+                setUserData(user);
+                storeFetchAddresses();
+                fetchAddresses();
+            }
+        });
 
-  const handleRpay = async () => {
-    const amount = getFinal().toFixed(2)
-    if (amount <= 0) {
-      Alert.alert('Payment Warning', 'Amount must be greater than zero');
-      return;
-    }
+        // Address from params (passed by prescriptiondetails)
+        if (params.address) {
+            setAddress(String(params.address));
+        }
 
-    const options = {
-      description: 'Order Payment',
-      image: 'https://www.irhealthcareservice.com/assets/images/logo/websitelogo.png',
-      currency: 'INR',
-      key: 'rzp_live_gCiUxU1aEWHn6Z',
-      amount: amount * 100,
-      name: 'IR Pharmacy',
-      prefill: {
-        email: data?.email || 'test@example.com',
-        contact: data?.mobile,
-        name: data?.name || 'Customer'
-      },
-      theme: { color: Colors.primary }
+        // Use selected address from store if available
+        if (selectedAddress) {
+            setAddress(selectedAddress.details);
+        }
+    }, []);
+
+    // Sync pdata whenever address or patientDetails change
+    useEffect(() => {
+        setPdata({
+            ...patientDetails,
+            p_name: patientDetails.p_name, // Backend expects p_name
+            address: address
+        });
+    }, [patientDetails, address]);
+
+    const fetchAddresses = async () => {
+        try {
+            const { data: res } = await axios.get('address/get_address.php');
+            if (res.status === 'success' && Array.isArray(res.data)) {
+                setAddressList(res.data);
+                // If no address set yet, use the first saved address
+                if (!address && !selectedAddress && res.data.length > 0) {
+                    setAddress(res.data[0].address);
+                }
+            }
+        } catch (error) {
+            console.log('Fetch addresses error', error);
+            // Fallback to store addresses
+            if (!address && addresses.length > 0) {
+                setAddress(addresses[0].details);
+            }
+        }
     };
 
-    RazorpayCheckout.open(options).then((paymentData) => {
-      console.log(paymentData);
-      placeOnlineOrder(paymentData);
-    }).catch((error) => {
-      Alert.alert('Payment Failed', 'Payment Cancelled By User.');
-    });
-  };
-
-  const handlePlaceOrder = async () => {
-    const total = getFinal().toFixed(2)
-
-    // 1. If not COD or no chargeable amount → online pay
-    if (total <= 0 || paymentMethod !== 'cod') {
-      return handleRpay();
-    }
-
-    if (data?.mobile == '') {
-      ToastAndroid.show('Invalid Number', ToastAndroid.LONG)
-      return
-    }
-
-    // 2. Make sure cart isn’t empty
-    const cartItems = items.filter(item => item.qty > 0);
-    if (!cartItems.length) {
-      Alert.alert('Cart is empty', 'Please add at least one item to your order.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 3. Build FormData payload matching v2 doc
-      const fd = new FormData();
-      fd.append('address', address ?? '');
-      fd.append('order_details', JSON.stringify(items));
-      fd.append('pdata', JSON.stringify(pdata));
-      fd.append('amount', getFinal().toFixed(2));
-      fd.append('payment_method', 'COD');
-      fd.append('discount', getTotalDiscountp().toFixed(2));
-
-      // Legacy fields just in case backend needs them or custom extensions
-      fd.append('mobile', data?.mobile ?? '');
-      fd.append('name', data?.username ?? '');
-      fd.append('prescription_id', id ?? '');
-      fd.append('pharId', '12');
-
-      // 4. Fire the request
-      const { data: res } = await axios.post(
-        'order/create_order.php',
-        fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-
-      console.log('PlaceOrder response:', res);
-
-      // 5. Handle API errors
-      if (res.status === 'success' || !res.error) {
-        const total = getFinal();
-        const orderId = res.data?.order_id || res.order_id;
-
-        router.replace({
-          pathname: '/orderconfirm',
-          params: {
-            total,
-            order_id: orderId
-          }
-        });
-
-      } else {
-        ToastAndroid.show(res.message || 'Order Failed', ToastAndroid.LONG);
-      }
-
-    } catch (error) {
-
-      const message =
-        error.response?.data?.message
-        || error.message
-        || 'Order Failed! Something went wrong';
-      ToastAndroid.show(message, ToastAndroid.LONG);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const checkStock = async (selectedItems, pincode) => {
-    try {
-      const dataItems = selectedItems.map(item => ({ id: item.id }));
-      const medDetail = JSON.stringify({ pincode, data: dataItems });
-
-      const fd = new FormData();
-      fd.append('medDetail', medDetail);
-
-      const { data } = await axios.post('medicine/search.php', fd, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+    const handleAddAddress = async () => {
+        if (!newAddress.pname || !newAddress.usermob || !newAddress.address) {
+            ToastAndroid.show('Please fill all address fields', ToastAndroid.SHORT);
+            return;
         }
-      });
+        setLoading(true);
+        try {
+            const fd = new FormData();
+            fd.append('pname', newAddress.pname);
+            fd.append('usermob', newAddress.usermob);
+            fd.append('address', newAddress.address);
 
-      console.log(data)
-      // Assuming API returns array of objects with id to map back
-      if (Array.isArray(data)) {
-        return selectedItems.map(item => {
-          // If response has id, match by id. result might not have id if it's purely search result
-          // But usually it should return id. If not, we might assume order?
-          // For safety, checks if we can find a match by id.
-          const found = data.find(d => d.id == item.id || d.name == item.name);
-          if (found) {
-            return {
-              ...item,
-              status: found.status?.toLowerCase() === 'available' ? 'available' : 'notavailable',
-              pharID: found.pharID || null,
-              price: found.price || item.price
-            };
-          }
-          return item;
-        });
-      }
-      return selectedItems;
-    } catch (error) {
-      console.error('checkStock error:', error);
-      return selectedItems;
-    }
-  };
+            const { data: res } = await axios.post('address/add_address.php', fd);
+            if (res.status === 'success') {
+                ToastAndroid.show('Address added', ToastAndroid.SHORT);
+                setAddressModalVisible(false);
+                setNewAddress({ pname: '', usermob: '', address: '' });
+                fetchAddresses();
+                setAddress(res.data.address);
+            } else {
+                ToastAndroid.show(res.message || 'Failed to add address', ToastAndroid.SHORT);
+            }
+        } catch (error) {
+            ToastAndroid.show('Error adding address', ToastAndroid.SHORT);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // ── Calculations ─────────────────────────────────────────────────────────
+    const getItemTotal = () =>
+        items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const getTotalDiscountp = () => {
-    if (!Array.isArray(items)) return 0;
+    const getTotalDiscount = () =>
+        items.reduce((sum, item) => {
+            const disc = (item.price * (item.discount ?? 0) / 100) * item.quantity;
+            return sum + disc;
+        }, 0);
 
-    return items.reduce((total, item) => {
-      const price = Number(item.price ?? 0);
-      const discountRate = Number(item.discount ?? 0);
-      const qty = Number(item.qty ?? 1);
+    const getTotalGst = () =>
+        items.reduce((sum, item) => {
+            const afterDisc = item.price - item.price * (item.discount ?? 0) / 100;
+            return sum + afterDisc * (item.gst ?? 0) / 100 * item.quantity;
+        }, 0);
 
-      const discountAmount = price * (discountRate / 100) * qty;
-      return total + discountAmount;
-    }, 0);
-  };
+    const getFinal = () => getItemTotal() - getTotalDiscount() + getTotalGst();
 
+    // ── Quantity update ───────────────────────────────────────────────────────
+    const updateQty = (id: string, delta: number) => {
+        setItems(prev => prev
+            .map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i)
+            .filter(i => i.quantity > 0)
+        );
+    };
 
-
-  const placeOnlineOrder = async (paymentData) => {
-    setLoading(true);
-
-    try {
-      const totalAmount = getFinal().toFixed(2);
-
-      const fd = new FormData();
-      fd.append('address', address ?? '');
-      fd.append('order_details', JSON.stringify(items));
-      fd.append('pdata', JSON.stringify(pdata));
-      fd.append('amount', totalAmount);
-      fd.append('payment_method', 'Online'); // or RPAY
-      fd.append('discount', getTotalDiscountp().toFixed(2));
-
-      // Extra fields
-      fd.append('mobile', data?.mobile ?? '');
-      fd.append('name', data?.username ?? '');
-      fd.append('prescription_id', id ?? '');
-      fd.append('pharId', '12');
-      fd.append('onlinepayid', paymentData.razorpay_payment_id);
-
-      // 4. Fire the request
-      const { data: res } = await axios.post(
-        'order/create_order.php',
-        fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-
-      console.log('PlaceOrder response:', res);
-
-
-      if (res.status === 'success' || !res.error) {
-        const orderId = res.data?.order_id || res.order_id;
-
-        router.replace({
-          pathname: '/orderconfirm',
-          params: {
-            total: totalAmount,
-            order_id: orderId
-          }
-        });
-
-      } else {
-        ToastAndroid.show(res.message || 'Order Failed', ToastAndroid.LONG);
-      }
-
-    } catch (error) {
-      const message =
-        error.response?.data?.message
-        || error.message
-        || 'Order Failed! Something went wrong';
-
-      // show a toast for 3.5 seconds
-      ToastAndroid.show(message, ToastAndroid.LONG);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const increaseQuantity = (id) => {
-    setItems(items.map(item => item.id === id ? { ...item, qty: item.qty + 1 } : item));
-  };
-  const getTotalDiscount = () => {
-    if (!Array.isArray(items)) return 0;
-    return items.reduce((total, item) => total + Number(item.discount ?? 0) * item.qty, 0);
-  };
-
-
-
-  const getTotalGst = () => {
-    if (!Array.isArray(items)) return 0;
-
-    return items.reduce((total, item) => {
-      const price = Number(item.price ?? 0);
-      const discountRate = Number(item.discount ?? 0);
-      const gstRate = Number(item.gst ?? 0);
-      const qty = Number(item.qty ?? 1);
-
-      const discountAmount = price * (discountRate / 100);
-      const discountedPrice = price - discountAmount;
-      const gstAmount = discountedPrice * (gstRate / 100);
-
-      return total + (gstAmount * qty);
-    }, 0);
-  };
-
-
-  const getTotalPrice = () => {
-    if (!Array.isArray(items)) return 0;
-    return items.reduce((total, item) => total + Number(item.price ?? 0) * item.qty, 0);
-  };
-
-  const decreaseQuantity = (id) => {
-    setItems(items.map(item => {
-      if (item.id === id) {
-        if (item.qty > 1) {
-          return { ...item, qty: item.qty - 1 };
+    // ── Place order ───────────────────────────────────────────────────────────
+    const buildFormData = (paymentInfo?: any) => {
+        const fd = new FormData();
+        fd.append('address', address ?? '');
+        fd.append('order_details', JSON.stringify(items.map(i => ({
+            medID: i.id, // Backend expects medID
+            qty: i.quantity,
+            price: i.price,
+            name: i.name,
+            discount: i.discount || 0,
+            gst: i.gst || 0,
+            totalAmount: (i.price * i.quantity).toFixed(2)
+        }))));
+        
+        // Ensure pdata is a JSON object with correct keys for orderdetails.php
+        const finalPdata = {
+            p_name: patientDetails.p_name,
+            age: patientDetails.age,
+            gender: patientDetails.gender,
+            address: address
+        };
+        fd.append('pdata', JSON.stringify(finalPdata));
+        
+        fd.append('amount', getFinal().toFixed(2));
+        fd.append('discount', getTotalDiscount().toFixed(2));
+        fd.append('mobile', userData?.mobile ?? '');
+        fd.append('name', userData?.name ?? userData?.username ?? '');
+        fd.append('prescription_id', prescriptionId ?? '');
+        fd.append('pharId', '12');
+        if (paymentInfo?.razorpay_payment_id) {
+            fd.append('payment_method', 'Online');
+            fd.append('onlinepayid', paymentInfo.razorpay_payment_id);
+            fd.append('payment_id', paymentInfo.razorpay_payment_id);
+        } else if (paymentInfo?.payu_payment_id) {
+            fd.append('payment_method', 'Online');
+            fd.append('onlinepayid', paymentInfo.payu_payment_id);
+            fd.append('payment_id', paymentInfo.payu_payment_id);
         } else {
-          return null;
+            fd.append('payment_method', 'COD');
         }
-      }
-      return item;
-    }).filter(item => item !== null));
-  };
-  const getFinal = () => {
-    if (!Array.isArray(items)) return 0;
+        return fd;
+    };
 
-    return items.reduce((total, item) => {
-      const price = Number(item.price ?? 0); // base price
-      const discountRate = Number(item.discount ?? 0);
-      const gstRate = Number(item.gst ?? 0);
-      const qty = Number(item.qty ?? 1);
+    const submitOrder = async (fd: FormData) => {
+        try {
+            const { data: res } = await axios.post('order/create_order.php', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            if (res.status === 'success' || !res.error) {
+                // Clear the cart after successful order
+                clearCart();
+                const orderId = res.data?.order_id || res.order_id;
+                router.replace({ pathname: '/orderconfirm', params: { total: getFinal().toFixed(2), order_id: orderId } });
+            } else {
+                showAlert({ type: 'error', title: 'Order Failed', message: res.message || 'Failed to place order.' });
+            }
+        } catch (error: any) {
+            console.log('Order error:', error.response?.data || error.message);
+            showAlert({ type: 'error', title: 'Order Failed', message: error.response?.data?.message || 'Something went wrong.' });
+        }
+    };
 
-      const discountAmount = price * (discountRate / 100);
-      const discountedPrice = price - discountAmount;
-      const gstAmount = discountedPrice * (gstRate / 100);
-      const finalPrice = (discountedPrice + gstAmount) * qty;
+    const handleRazorpay = async () => {
+        const amount = getFinal();
+        if (amount <= 0) return;
+        const options = {
+            description: 'Order Payment',
+            image: 'https://www.irhealthcareservice.com/assets/images/logo/websitelogo.png',
+            currency: 'INR',
+            key: 'rzp_live_gCiUxU1aEWHn6Z',
+            amount: Math.round(amount * 100),
+            name: 'IR Pharmacy',
+            prefill: {
+                email: userData?.email || '',
+                contact: userData?.mobile || '',
+                name: userData?.name || 'Customer',
+            },
+            theme: { color: Colors.primary },
+        };
+        try {
+            const paymentData = await RazorpayCheckout.open(options);
+            setLoading(true);
+            await submitOrder(buildFormData(paymentData));
+        } catch {
+            showAlert({ type: 'error', title: 'Payment Failed', message: 'Payment was cancelled or failed.' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      return total + finalPrice;
-    }, 0);
-  };
+    // ── PayU Money ─────────────────────────────────────────────────────────
+    const handlePayU = async () => {
+        const amount = getFinal();
+        if (amount <= 0) return;
 
+        const txnid = 'IR' + Date.now();
+        setLoading(true);
+        try {
+            const fd = new FormData();
+            fd.append('txnid', txnid);
+            fd.append('amount', amount.toFixed(2));
+            fd.append('productinfo', 'IR Pharmacy Order');
+            fd.append('firstname', userData?.name || 'Customer');
+            fd.append('email', userData?.email || 'customer@irpharmacy.com');
+            fd.append('phone', userData?.mobile || '');
 
-  const deleteItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-  return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <HeaderAB title={'Checkout'} />
-      <View style={{ height: responsiveScreenHeight(78) }}>
-        <FlatList
-          data={items}
-          contentContainerStyle={{
-            paddingBottom: responsiveScreenHeight(6)
-          }}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => {
+            const { data: res } = await axios.post('order/payu_hash.php', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
 
-            const price = Number(item.price); // selling price (after discount)
-            const discountRate = Number(item.discount); // percentage
-            const gstRate = Number(item.gst);
+            if (res.status !== 'success' || !res.data?.hash) {
+                showAlert({ type: 'error', title: 'Payment Error', message: 'Could not initiate payment.' });
+                return;
+            }
 
-            const discountAmount = price * (discountRate / 100); // discount in ₹
-            const priceAfterDiscount = price - discountAmount;
-            const gstAmount = priceAfterDiscount * (gstRate / 100);
-            const totalPayable = priceAfterDiscount + gstAmount;
-            return (
-              <View style={{ width: '95%', alignSelf: 'center', height: responsiveScreenWidth(27), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
-                {item.image ? (
-                  <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={{ uri: item.image }} />
-                ) : (
-                  <Image style={{ height: responsiveScreenWidth(12), width: responsiveScreenWidth(12), marginLeft: 15 }} source={require('../assets/images/noprevew.png')} />
-                )}
-                <View style={{ marginLeft: 10, height: '75%', justifyContent: 'space-between', width: '40%', marginRight: 15 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#333' }}>{item.name}</Text>
-                  <Text numberOfLines={1} style={{ fontFamily: 'novaregular' }}>{item.desc}</Text>
-                  {item.status == "available" ? <View style={{ flexDirection: 'row', }}>
-                    <Text style={{ textDecorationLine: 'line-through', fontFamily: 'novaregular', fontSize: responsiveFontSize(2), color: '#333', paddingRight: 20 }}>{"₹" + price.toFixed(0)}</Text>
-                    <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.8), color: 'green' }}>{"₹" + discountAmount.toFixed(1) + " (" + discountRate + "%) off"}</Text>
+            const d = res.data;
+            // Build auto-submit HTML form for PayU
+            const html = `
+<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body onload="document.getElementById('payuForm').submit();">
+<p style="text-align:center;padding:40px;font-family:sans-serif;color:#666;">Redirecting to PayU...</p>
+<form id="payuForm" method="POST" action="https://secure.payu.in/_payment">
+  <input type="hidden" name="key" value="${d.key}" />
+  <input type="hidden" name="txnid" value="${d.txnid}" />
+  <input type="hidden" name="amount" value="${d.amount}" />
+  <input type="hidden" name="productinfo" value="${d.productinfo}" />
+  <input type="hidden" name="firstname" value="${d.firstname}" />
+  <input type="hidden" name="email" value="${d.email}" />
+  <input type="hidden" name="phone" value="${d.phone}" />
+  <input type="hidden" name="surl" value="${d.surl}" />
+  <input type="hidden" name="furl" value="${d.furl}" />
+  <input type="hidden" name="hash" value="${d.hash}" />
+  <input type="hidden" name="service_provider" value="payu_paisa" />
+</form>
+</body></html>`;
 
-                  </View> : <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(2), color: 'red' }}>{"Not Available"}</Text>}
-                  {item.status == "available" && <Text style={{ fontFamily: 'novaregular', fontSize: responsiveFontSize(1.7), color: '#333', }}>{"GST: ₹" + gstAmount.toFixed(2) + " (" + gstRate + "%)"}</Text>}
-                  {item.status == "available" && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2), color: '#000080', }}>₹ {totalPayable.toFixed(2)}</Text>}
-                  {/* <View style={{ justifyContent: 'center', alignItems: 'center', height: responsiveScreenWidth(6), flexDirection: 'row', }}>
+            setPayuHtml(html);
+            setPayuWebViewVisible(true);
+        } catch (err: any) {
+            showAlert({ type: 'error', title: 'Payment Error', message: err?.message || 'Could not start PayU payment.' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-                     <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.2), color: '#333' }}>{"₹ " + item.price}</Text>
-                     <Text style={{ fontFamily: 'novaregular', color: '#555', marginLeft: 10, textDecorationLine: 'line-through', textDecorationStyle: 'solid' }}>{"₹ " + item.original_price}</Text>
-                     <Text style={{ color: 'green', marginLeft: 10, fontFamily: 'novaregular' }}>{item.offer}</Text>
-                </View> */}
+    const onPayUNavigation = async (navState: any) => {
+        const url = navState.url || '';
+        if (url.includes('payu_success')) {
+            setPayuWebViewVisible(false);
+            setLoading(true);
+            try {
+                await submitOrder(buildFormData({ payu_payment_id: 'PayU_' + Date.now() }));
+            } catch { } finally { setLoading(false); }
+        } else if (url.includes('payu_failure')) {
+            setPayuWebViewVisible(false);
+            showAlert({ type: 'error', title: 'Payment Failed', message: 'Payment was cancelled or failed.' });
+        }
+    };
 
-                </View>
-                <View style={{ width: '25%', height: '40%', borderWidth: 1.5, borderColor: item.status == "available" ? '#367F52' : '#ccc', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 }}>
+    const handlePlaceOrder = async () => {
+        if (!items.length) {
+            showAlert({ type: 'warning', title: 'Empty Cart', message: 'Add at least one item before ordering.' });
+            return;
+        }
+        if (paymentMethod === 'rpay') return handleRazorpay();
+        if (paymentMethod === 'payu') return handlePayU();
 
-                  <AntDesign onPress={() => { item.status == "available" ? item.qty > 1 ? decreaseQuantity(item.id) : ToastAndroid.show('You have to select atleast 1 quantity .', ToastAndroid.SHORT) : null }} size={responsiveFontSize(2.5)} name="minus" color={item.status == "available" ? '#367F52' : '#ccc'} />
+        setLoading(true);
+        try {
+            await submitOrder(buildFormData());
+        } catch (err: any) {
+            ToastAndroid.show(err?.message || 'Order Failed', ToastAndroid.LONG);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // ── UI ────────────────────────────────────────────────────────────────────
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
 
-
-
-                  <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: item.status == "available" ? '#333' : '#ccc' }}>{item.qty}</Text>
-                  <AntDesign onPress={() => { item.status == "available" ? increaseQuantity(item.id) : null }} size={responsiveFontSize(2.5)} name="plus" color={item.status == "available" ? '#367F52' : '#ccc'} />
-                </View>
-              </View>
-            )
-          }}
-          ListFooterComponent={() =>
-            <View>
-              <View style={{ borderTopWidth: 2, borderColor: '#ddd', marginTop: 20, paddingBottom: 2 }}>
-                <View style={{ width: '90%', alignSelf: 'center' }}>
-                  <Text style={{ borderBottomWidth: 1, borderColor: '#ccc', lineHeight: responsiveScreenWidth(15), fontSize: responsiveFontSize(2.2), fontFamily: 'novabold' }}>Bill summary</Text>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Item total'}</Text>
-                    {items && <Text style={{ color: 'green', fontFamily: 'novabold', fontSize: responsiveFontSize(2) }}>₹ {Number(getTotalPrice()).toFixed(2)}</Text>}
-                    {/* {items && <Text style={{ color: 'green', fontSize: responsiveFontSize(2) }}>₹ {'160'}</Text>} */}
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                    <Text style={{ color: '#000', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Discount'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{"- " + getTotalDiscountp().toFixed(2)}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                    <Text style={{ color: '#000', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'Shipping fee'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'free'}</Text>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 35 }}>
-                    <Text style={{ color: '#000', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{'GST'}</Text>
-                    <Text style={{ color: '#000', fontSize: responsiveFontSize(2), fontFamily: 'novaregular', }}>{getTotalGst().toFixed(2)}</Text>
-                  </View>
-
-                  <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#ccc', height: responsiveScreenWidth(12), width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-
-                    <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>Bill total</Text>
-                    {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', color: '#f1735a' }}>₹  {getFinal().toFixed(2)}</Text>}
-                    {/* {items && <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', }}>₹ {Number(160) - Number(40)}</Text>} */}
-                  </View>
-                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingVertical: responsiveScreenWidth(2) }}>
-                    <Text style={{ color: '#555', fontSize: responsiveFontSize(2), fontFamily: 'novaregular' }}>{'Address'}</Text>
-                    <Text style={{ color: 'green', fontSize: responsiveFontSize(2), fontFamily: 'novabold', width: '45%', paddingVertical: 5 }}>{selectedAddres?.pname + ',' + selectedAddres?.address}</Text>
-                  </TouchableOpacity>
-                </View>
-
-              </View>
-
-              <View style={{ marginTop: 20, paddingHorizontal: responsiveScreenWidth(5) }}>
-                <Text style={{ fontSize: responsiveFontSize(2.2), fontFamily: 'novabold', marginBottom: 10 }}>Select Payment Method</Text>
-
-                {['cod', 'rpay'].map((method) => (
-                  <TouchableOpacity
-                    key={method}
-                    onPress={() => setPaymentMethod(method)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: 14,
-                      marginVertical: 5,
-                      borderWidth: 1.5,
-                      borderRadius: 10,
-                      borderColor: paymentMethod === method ? Colors.primary : '#ccc',
-                      backgroundColor: paymentMethod === method ? '#f1fff3' : '#fff',
-                    }}
-                  >
-                    <AntDesign
-                      name={paymentMethod === method ? 'checkcircle' : 'checkcircleo'}
-                      size={20}
-                      color={paymentMethod === method ? Colors.primary : '#aaa'}
-                    />
-                    <Text style={{ fontFamily: 'novaregular', marginLeft: 10, fontSize: responsiveFontSize(2) }}>
-                      {method === 'cod' ? 'Cash on Delivery (COD)' : 'Card / UPI / Net Banking'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-
-
+            {/* Header */}
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 15) }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={22} color="#333" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Checkout</Text>
+                <View style={{ width: 36 }} />
             </View>
-          }
-        />
-      </View>
-      <View style={{ backgroundColor: '#fff', height: responsiveScreenHeight(10), width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ddd', position: 'absolute', bottom: 0 }}>
-        {items && <Text style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(3), }}>₹ {(getFinal()).toFixed(2)}</Text>}
 
-        <TouchableOpacity
-          style={{
-            height: 50,
-            backgroundColor: items && getFinal() > 0 ? Colors.primary : '#ccc',
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 6,
-            width: '40%'
-          }}
-          disabled={loading || getFinal() <= 0}
-          onPress={handlePlaceOrder}
-        >
+            <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 180 }}>
 
-          <Text
-            style={{ fontFamily: 'novabold', fontSize: responsiveFontSize(2.3), color: Colors.backgroundcolor }}
-          >
-            Checkout
-          </Text>
-          {/* )} */}
-        </TouchableOpacity>
+                {/* ── Step: Delivery Address ─────────────────────────────── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepNum}>1</Text>
+                        </View>
+                        <Text style={styles.sectionTitle}>Delivery Address</Text>
+                        <TouchableOpacity onPress={() => setAddressModalVisible(true)} style={{ marginLeft: 'auto' }}>
+                            <Text style={{ color: Colors.primary, fontFamily: 'novabold' }}>Change</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={() => setAddressModalVisible(true)} activeOpacity={0.7}>
+                        <View style={styles.addressCard}>
+                            <View style={styles.addressIconWrap}>
+                                <Ionicons name="location" size={20} color={Colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                {selectedAddress ? (
+                                    <>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                            <View style={{ backgroundColor: Colors.primary + '18', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                                <Text style={{ fontFamily: 'novabold', fontSize: 11, color: Colors.primary }}>
+                                                    {selectedAddress.label || 'Home'}
+                                                </Text>
+                                            </View>
+                                            {selectedAddress.pname ? (
+                                                <Text style={{ fontFamily: 'novaregular', fontSize: 12, color: '#999', marginLeft: 8 }}>
+                                                    {selectedAddress.pname}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <Text style={styles.addressText} numberOfLines={3}>{address || selectedAddress.details}</Text>
+                                    </>
+                                ) : address ? (
+                                    <Text style={styles.addressText} numberOfLines={3}>{address}</Text>
+                                ) : (
+                                    <Text style={styles.addressPlaceholder}>Tap to select delivery address</Text>
+                                )}
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color="#999" />
+                        </View>
+                    </TouchableOpacity>
+                    {!address && !selectedAddress && (
+                        <TouchableOpacity
+                            onPress={() => router.push({ pathname: '/location_selection', params: { source: 'checkout' } } as any)}
+                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginTop: 8, backgroundColor: '#f0f9f4', borderRadius: 12 }}
+                        >
+                            <Ionicons name="map-outline" size={18} color={Colors.primary} />
+                            <Text style={{ fontFamily: 'novabold', fontSize: 14, color: Colors.primary, marginLeft: 8 }}>Pick from Map</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
 
+                {/* ── Step: Patient Details ─────────────────────────────── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepNum}>2</Text>
+                        </View>
+                        <Text style={styles.sectionTitle}>Patient Information</Text>
+                    </View>
+                    
+                    <View style={styles.patientCard}>
+                        <Text style={styles.inputLabel}>Patient Name</Text>
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="person-outline" size={18} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.patientInput}
+                                placeholder="Enter full name"
+                                placeholderTextColor="#999"
+                                value={patientDetails.p_name}
+                                onChangeText={(text) => setPatientDetails({ ...patientDetails, p_name: text })}
+                            />
+                        </View>
 
+                        <View style={styles.row}>
+                            <View style={{ flex: 1, marginRight: 12 }}>
+                                <Text style={styles.inputLabel}>Age</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Ionicons name="calendar-outline" size={18} color="#666" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.patientInput}
+                                        placeholder="Yrs"
+                                        placeholderTextColor="#999"
+                                        keyboardType="number-pad"
+                                        value={patientDetails.age}
+                                        onChangeText={(text) => setPatientDetails({ ...patientDetails, age: text })}
+                                    />
+                                </View>
+                            </View>
 
-      </View>
+                            <View style={{ flex: 1.5 }}>
+                                <Text style={styles.inputLabel}>Gender</Text>
+                                <View style={styles.genderContainer}>
+                                    {['Male', 'Female'].map((g) => (
+                                        <TouchableOpacity
+                                            key={g}
+                                            activeOpacity={0.7}
+                                            onPress={() => setPatientDetails({ ...patientDetails, gender: g })}
+                                            style={[styles.genderBtn, patientDetails.gender === g && styles.genderBtnActive]}
+                                        >
+                                            <Ionicons 
+                                                name={g === 'Male' ? 'male' : 'female'} 
+                                                size={16} 
+                                                color={patientDetails.gender === g ? '#fff' : '#666'} 
+                                                style={{ marginRight: 6 }} 
+                                            />
+                                            <Text style={[styles.genderText, patientDetails.gender === g && styles.genderTextActive]}>{g}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </View>
 
-    </View>
-  )
+                {/* ── Step: Order Items ──────────────────────────────────── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepNum}>3</Text>
+                        </View>
+                        <Text style={styles.sectionTitle}>Order Items ({items.length})</Text>
+                    </View>
+
+                    {items.map((item) => {
+                        const discAmt = item.price * (item.discount ?? 0) / 100;
+                        const afterDisc = item.price - discAmt;
+                        const gstAmt = afterDisc * (item.gst ?? 0) / 100;
+                        const lineTotal = (afterDisc + gstAmt) * item.quantity;
+                        const isAvail = !isPrescriptionFlow || item.status === 'available';
+
+                        return (
+                            <View key={item.id} style={[styles.itemCard, !isAvail && styles.itemCardUnavail]}>
+                                <View style={styles.itemImageWrap}>
+                                    <Image
+                                        source={item.image ? { uri: item.image } : require('../assets/images/noprevew.png')}
+                                        style={styles.itemImage}
+                                        resizeMode="contain"
+                                    />
+                                    {!isAvail && (
+                                        <View style={styles.unavailBadge}>
+                                            <Text style={styles.unavailText}>N/A</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                <View style={styles.itemBody}>
+                                    <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+
+                                    {isAvail ? (
+                                        <>
+                                            <View style={styles.priceRow}>
+                                                <Text style={styles.itemPrice}>₹{lineTotal.toFixed(2)}</Text>
+                                                {(item.discount ?? 0) > 0 && (
+                                                    <View style={styles.discBadge}>
+                                                        <Text style={styles.discText}>{item.discount}% OFF</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <Text style={styles.itemUnit}>
+                                                ₹{item.price.toFixed(2)} per unit
+                                                {(item.gst ?? 0) > 0 ? `  •  GST ${item.gst}%` : ''}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        <Text style={styles.unavailLabel}>Not Available</Text>
+                                    )}
+
+                                    {/* Qty stepper */}
+                                    <View style={styles.qtyRow}>
+                                        <TouchableOpacity
+                                            style={[styles.qtyBtn, !isAvail && { opacity: 0.4 }]}
+                                            onPress={() => isAvail && updateQty(item.id, -1)}
+                                            disabled={!isAvail}
+                                        >
+                                            <Ionicons name="remove" size={16} color={Colors.primary} />
+                                        </TouchableOpacity>
+                                        <Text style={styles.qtyText}>{item.quantity}</Text>
+                                        <TouchableOpacity
+                                            style={[styles.qtyBtn, !isAvail && { opacity: 0.4 }]}
+                                            onPress={() => isAvail && updateQty(item.id, 1)}
+                                            disabled={!isAvail}
+                                        >
+                                            <Ionicons name="add" size={16} color={Colors.primary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    })}
+                </View>
+
+                {/* ── Step: Bill Summary ─────────────────────────────────── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepNum}>4</Text>
+                        </View>
+                        <Text style={styles.sectionTitle}>Bill Summary</Text>
+                    </View>
+                    <View style={styles.billCard}>
+                        <View style={styles.billRow}>
+                            <Text style={styles.billLabel}>Item Total</Text>
+                            <Text style={styles.billValue}>₹{getItemTotal().toFixed(2)}</Text>
+                        </View>
+                        {getTotalDiscount() > 0 && (
+                            <View style={styles.billRow}>
+                                <Text style={styles.billLabel}>Discount</Text>
+                                <Text style={[styles.billValue, { color: '#2E7D32' }]}>- ₹{getTotalDiscount().toFixed(2)}</Text>
+                            </View>
+                        )}
+                        <View style={styles.billRow}>
+                            <Text style={styles.billLabel}>Delivery Fee</Text>
+                            <View style={styles.freePill}>
+                                <Text style={styles.freeText}>FREE</Text>
+                            </View>
+                        </View>
+                        {getTotalGst() > 0 && (
+                            <View style={styles.billRow}>
+                                <Text style={styles.billLabel}>GST</Text>
+                                <Text style={styles.billValue}>₹{getTotalGst().toFixed(2)}</Text>
+                            </View>
+                        )}
+                        <View style={styles.divider} />
+                        <View style={styles.billRow}>
+                            <Text style={styles.totalLabel}>Total Amount</Text>
+                            <Text style={styles.totalValue}>₹{getFinal().toFixed(2)}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* ── Step: Payment Method ──────────────────────────────── */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepNum}>5</Text>
+                        </View>
+                        <Text style={styles.sectionTitle}>Payment Method</Text>
+                    </View>
+
+                    {[
+                        { id: 'cod', label: 'Cash on Delivery', sub: 'Pay when your order arrives', icon: 'cash-outline' as const },
+                        { id: 'payu', label: 'PayU Money', sub: 'UPI, Cards, Net Banking via PayU', icon: 'wallet-outline' as const },
+                        { id: 'rpay', label: 'Razorpay', sub: 'Secure payment via Razorpay', icon: 'card-outline' as const },
+                    ].map((method) => (
+                        <TouchableOpacity
+                            key={method.id}
+                            style={[styles.paymentCard, paymentMethod === method.id && styles.paymentCardActive]}
+                            onPress={() => setPaymentMethod(method.id as 'cod' | 'rpay' | 'payu')}
+                            activeOpacity={0.8}
+                        >
+                            <View style={[styles.paymentIconWrap, paymentMethod === method.id && { backgroundColor: Colors.primary + '22' }]}>
+                                <Ionicons name={method.icon} size={22} color={paymentMethod === method.id ? Colors.primary : '#999'} />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={[styles.paymentLabel, paymentMethod === method.id && { color: Colors.primary }]}>
+                                    {method.label}
+                                </Text>
+                                <Text style={styles.paymentSub}>{method.sub}</Text>
+                            </View>
+                            <View style={[styles.radioOuter, paymentMethod === method.id && { borderColor: Colors.primary }]}>
+                                {paymentMethod === method.id && <View style={styles.radioInner} />}
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Safe delivery notice */}
+                <View style={styles.safeRow}>
+                    <MaterialCommunityIcons name="shield-check" size={18} color="#2E7D32" />
+                    <Text style={styles.safeText}>100% Secure & Genuine Medicines</Text>
+                </View>
+
+            </ScrollView>
+
+            {/* Address Selection & Addition Modal */}
+            <Modal
+                visible={addressModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setAddressModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Address</Text>
+                            <TouchableOpacity onPress={() => setAddressModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ padding: 16 }}>
+                            {addressList.length > 0 && (
+                                <>
+                                    <Text style={styles.subTitle}>Saved Addresses</Text>
+                                    {addressList.map((item, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[styles.addressItem, address === item.address && styles.addressItemActive]}
+                                            onPress={() => {
+                                                setAddress(item.address);
+                                                setAddressModalVisible(false);
+                                            }}
+                                        >
+                                            <Ionicons
+                                                name={address === item.address ? "radio-button-on" : "radio-button-off"}
+                                                size={20}
+                                                color={address === item.address ? Colors.primary : "#999"}
+                                            />
+                                            <View style={{ marginLeft: 12, flex: 1 }}>
+                                                <Text style={styles.addressNameText}>{item.pname}</Text>
+                                                <Text style={styles.addressDetailText}>{item.address}</Text>
+                                                <Text style={styles.addressPhoneText}>{item.usermob}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                    <View style={styles.divider} />
+                                </>
+                            )}
+
+                            <Text style={styles.subTitle}>Add New Address</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Recipient Name"
+                                value={newAddress.pname}
+                                onChangeText={(text) => setNewAddress({ ...newAddress, pname: text })}
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Phone Number"
+                                keyboardType="phone-pad"
+                                value={newAddress.usermob}
+                                onChangeText={(text) => setNewAddress({ ...newAddress, usermob: text })}
+                            />
+                            <TextInput
+                                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                                placeholder="Complete Address"
+                                multiline
+                                value={newAddress.address}
+                                onChangeText={(text) => setNewAddress({ ...newAddress, address: text })}
+                            />
+                            <TouchableOpacity
+                                style={styles.saveAddressBtn}
+                                onPress={handleAddAddress}
+                                disabled={loading}
+                            >
+                                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveAddressText}>Save and Use Address</Text>}
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* PayU WebView Modal */}
+            <Modal
+                visible={payuWebViewVisible}
+                animationType="slide"
+                onRequestClose={() => setPayuWebViewVisible(false)}
+            >
+                <View style={{ flex: 1, paddingTop: insets.top }}>
+                    <View style={styles.payuHeader}>
+                        <TouchableOpacity onPress={() => setPayuWebViewVisible(false)} style={styles.backBtn}>
+                            <Ionicons name="close" size={22} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>PayU Payment</Text>
+                        <View style={{ width: 36 }} />
+                    </View>
+                    {payuHtml ? (
+                        <WebView
+                            source={{ html: payuHtml }}
+                            onNavigationStateChange={onPayUNavigation}
+                            javaScriptEnabled
+                            domStorageEnabled
+                            startInLoadingState
+                            renderLoading={() => (
+                                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                                    <ActivityIndicator size="large" color={Colors.primary} />
+                                    <Text style={{ marginTop: 12, fontFamily: 'novaregular', color: '#666' }}>Loading payment page...</Text>
+                                </View>
+                            )}
+                        />
+                    ) : null}
+                </View>
+            </Modal>
+
+            {/* ── Bottom CTA ─────────────────────────────────────────────── */}
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+                <View style={styles.footerTop}>
+                    <Text style={styles.footerLabel}>Total Payable</Text>
+                    <Text style={styles.footerAmount}>₹{getFinal().toFixed(2)}</Text>
+                </View>
+                <TouchableOpacity
+                    onPress={handlePlaceOrder}
+                    disabled={loading || items.length === 0}
+                    activeOpacity={0.88}
+                    style={{ borderRadius: 16, overflow: 'hidden' }}
+                >
+                    <LinearGradient
+                        colors={items.length === 0 ? ['#ccc', '#bbb'] : [Colors.primary, '#5DA34A']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={styles.ctaBtn}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                            <>
+                                <Text style={styles.ctaText}>
+                                    {paymentMethod === 'rpay' ? 'Pay Now' : 'Place Order'}
+                                </Text>
+                                <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
+                            </>
+                        )}
+                    </LinearGradient>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#F8F9FA' },
+
+    // Header
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingBottom: 14,
+        backgroundColor: '#fff',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+    },
+    backBtn: {
+        width: 36, height: 36,
+        borderRadius: 18,
+        backgroundColor: '#F5F5F5',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontFamily: 'novabold',
+        fontSize: 18,
+        color: '#1A1A2E',
+    },
+
+    scroll: { flex: 1 },
+
+    // Section
+    section: { marginTop: 16, marginHorizontal: 16 },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    stepBadge: {
+        width: 26, height: 26,
+        borderRadius: 13,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    stepNum: { fontFamily: 'novabold', fontSize: 13, color: '#fff' },
+    sectionTitle: { fontFamily: 'novabold', fontSize: 16, color: '#1A1A2E' },
+
+    // Address
+    addressCard: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    addressIconWrap: {
+        width: 36, height: 36,
+        borderRadius: 18,
+        backgroundColor: Colors.primary + '18',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    addressText: { fontFamily: 'novaregular', fontSize: 14, color: '#444', lineHeight: 22 },
+    addressPlaceholder: { fontFamily: 'novaregular', fontSize: 14, color: '#bbb' },
+
+    // Item card
+    itemCard: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        flexDirection: 'row',
+        marginBottom: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    itemCardUnavail: { opacity: 0.6 },
+    itemImageWrap: {
+        width: 70, height: 70,
+        borderRadius: 12,
+        backgroundColor: '#F5F5F5',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+        position: 'relative',
+    },
+    itemImage: { width: 56, height: 56 },
+    unavailBadge: {
+        position: 'absolute', top: 0, right: 0,
+        backgroundColor: '#E53935',
+        borderRadius: 6,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+    },
+    unavailText: { fontFamily: 'novabold', fontSize: 9, color: '#fff' },
+    itemBody: { flex: 1 },
+    itemName: { fontFamily: 'novabold', fontSize: 14, color: '#1A1A2E', marginBottom: 4 },
+    priceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
+    itemPrice: { fontFamily: 'novabold', fontSize: 15, color: Colors.primary },
+    discBadge: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 6, paddingVertical: 2,
+        borderRadius: 6, marginLeft: 8,
+    },
+    discText: { fontFamily: 'novabold', fontSize: 10, color: '#2E7D32' },
+    itemUnit: { fontFamily: 'novaregular', fontSize: 11, color: '#999', marginBottom: 8 },
+    unavailLabel: { fontFamily: 'novabold', fontSize: 13, color: '#E53935', marginBottom: 8 },
+
+    // Qty stepper
+    qtyRow: { flexDirection: 'row', alignItems: 'center' },
+    qtyBtn: {
+        width: 28, height: 28,
+        borderRadius: 14,
+        backgroundColor: '#F0F7F0',
+        borderWidth: 1,
+        borderColor: Colors.primary + '55',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    qtyText: {
+        fontFamily: 'novabold', fontSize: 15,
+        color: '#1A1A2E',
+        paddingHorizontal: 12, minWidth: 32, textAlign: 'center',
+    },
+
+    // Bill
+    billCard: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    billRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    billLabel: { fontFamily: 'novaregular', fontSize: 14, color: '#666' },
+    billValue: { fontFamily: 'novabold', fontSize: 14, color: '#333' },
+    freePill: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 10, paddingVertical: 3,
+        borderRadius: 10,
+    },
+    freeText: { fontFamily: 'novabold', fontSize: 11, color: '#2E7D32', letterSpacing: 0.5 },
+    divider: { borderTopWidth: 1, borderTopColor: '#F0F0F0', marginBottom: 12 },
+    totalLabel: { fontFamily: 'novabold', fontSize: 17, color: '#1A1A2E' },
+    totalValue: { fontFamily: 'novabold', fontSize: 20, color: Colors.primary },
+
+    // Payment
+    paymentCard: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        borderWidth: 1.5,
+        borderColor: '#EFEFEF',
+        elevation: 1,
+    },
+    paymentCardActive: {
+        borderColor: Colors.primary,
+        backgroundColor: '#F6FFF8',
+    },
+    paymentIconWrap: {
+        width: 42, height: 42,
+        borderRadius: 21,
+        backgroundColor: '#F5F5F5',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    paymentLabel: { fontFamily: 'novabold', fontSize: 14, color: '#333', marginBottom: 2 },
+    paymentSub: { fontFamily: 'novaregular', fontSize: 12, color: '#999' },
+    radioOuter: {
+        width: 20, height: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#ccc',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioInner: {
+        width: 10, height: 10,
+        borderRadius: 5,
+        backgroundColor: Colors.primary,
+    },
+
+    // Safe
+    safeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    safeText: { fontFamily: 'novaregular', fontSize: 13, color: '#555', marginLeft: 6 },
+
+    // Footer
+    footer: {
+        position: 'absolute',
+        bottom: 0, left: 0, right: 0,
+        backgroundColor: '#fff',
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: -4 },
+    },
+    footerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    footerLabel: { fontFamily: 'novaregular', fontSize: 14, color: '#888' },
+    footerAmount: { fontFamily: 'novabold', fontSize: 22, color: '#1A1A2E' },
+    ctaBtn: {
+        height: 52,
+        borderRadius: 16,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    ctaText: { fontFamily: 'novabold', fontSize: 17, color: '#fff' },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalTitle: {
+        fontFamily: 'novabold',
+        fontSize: 18,
+        color: '#1A1A2E',
+    },
+    subTitle: {
+        fontFamily: 'novabold',
+        fontSize: 14,
+        color: '#666',
+        marginTop: 16,
+        marginBottom: 12,
+    },
+    addressItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#EFEFEF',
+        marginBottom: 12,
+    },
+    addressItemActive: {
+        borderColor: Colors.primary,
+        backgroundColor: '#F6FFF8',
+    },
+    addressNameText: {
+        fontFamily: 'novabold',
+        fontSize: 15,
+        color: '#333',
+    },
+    addressDetailText: {
+        fontFamily: 'novaregular',
+        fontSize: 13,
+        color: '#666',
+        marginTop: 4,
+    },
+    addressPhoneText: {
+        fontFamily: 'novaregular',
+        fontSize: 12,
+        color: '#999',
+        marginTop: 4,
+    },
+    input: {
+        backgroundColor: '#F9F9F9',
+        borderWidth: 1,
+        borderColor: '#EFEFEF',
+        borderRadius: 12,
+        padding: 14,
+        fontFamily: 'novaregular',
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 12,
+    },
+    saveAddressBtn: {
+        backgroundColor: Colors.primary,
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+        marginTop: 8,
+        marginBottom: 32,
+    },
+    saveAddressText: {
+        fontFamily: 'novabold',
+        fontSize: 16,
+        color: '#fff',
+    },
+    inputLabel: {
+        fontFamily: 'novabold',
+        fontSize: 12,
+        color: '#8E8E93',
+        marginBottom: 6,
+        marginLeft: 4,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
+    },
+    inputIcon: {
+        marginRight: 8,
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    patientCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#F2F2F7',
+    },
+    patientInput: {
+        flex: 1,
+        paddingVertical: 12,
+        fontFamily: 'novaregular',
+        fontSize: 15,
+        color: '#1C1C1E',
+    },
+    genderContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 12,
+        padding: 4,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
+    },
+    genderBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        paddingVertical: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 10,
+    },
+    genderBtnActive: {
+        backgroundColor: Colors.primary,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    genderText: {
+        fontFamily: 'novaregular',
+        fontSize: 14,
+        color: '#666',
+    },
+    genderTextActive: {
+        color: '#fff',
+        fontFamily: 'novabold',
+    },
+    payuHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        backgroundColor: '#fff',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+});

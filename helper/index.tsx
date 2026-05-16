@@ -1,79 +1,68 @@
-import Axios from "axios";
+import Axios, { AxiosError } from "axios";
 import { _retrieveData, _storeData, _removeData } from "../local_storage";
 import { router } from "expo-router";
 
 export const AbortRequest = new AbortController();
 
+const BASE_URL = "https://irhealthcareservice.com/app_api/v2/";
+
 const instance = Axios.create({
-    headers: {
-        "Accept": "*/*",
-    },
-    baseURL: "https://irhealthcareservice.com/app_api/v2/",
-    timeout: 5000,
-    signal: AbortRequest.signal
+    headers: { "Accept": "*/*" },
+    baseURL: BASE_URL,
+    timeout: 20000,
 });
 
 instance.interceptors.request.use(
     async (config) => {
-        config.timeout = 5000;
-        const token = await _retrieveData('ACCESS_TOKEN');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+        config.timeout = 20000;
+        try {
+            const token = await _retrieveData('ACCESS_TOKEN');
+            const tokenStr = typeof token === 'string' ? token : null;
+            if (tokenStr && tokenStr !== 'error') {
+                config.headers.Authorization = `Bearer ${tokenStr}`;
+            }
+        } catch { }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 instance.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
+    async (error: AxiosError) => {
+        const originalRequest = error.config as any;
 
-        // Prevent infinite loops
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-
             try {
                 const refreshToken = await _retrieveData('REFRESH_TOKEN');
-                if (!refreshToken) {
-                    throw new Error("No refresh token available");
-                }
+                if (!refreshToken || refreshToken === 'error') throw new Error("No refresh token");
 
-                // Call refresh token endpoint
                 const formData = new FormData();
                 formData.append('refresh_token', refreshToken);
 
-                // Using fetch to avoid circular dependency with axios interceptors
-                const response = await fetch("https://irhealthcareservice.com/app_api/v2/auth/refresh_token.php", {
+                const response = await fetch(`${BASE_URL}auth/refresh_token.php`, {
                     method: 'POST',
                     body: formData,
                 });
-
                 const payload = await response.json();
 
-                if (payload.status === 'success' && payload.data && payload.data.access_token) {
-                    // Update tokens
+                if (payload.status === 'success' && payload.data?.access_token) {
                     await _storeData('ACCESS_TOKEN', payload.data.access_token);
                     if (payload.data.refresh_token) {
                         await _storeData('REFRESH_TOKEN', payload.data.refresh_token);
                     }
-
-                    // Retry original request with new token
                     originalRequest.headers.Authorization = `Bearer ${payload.data.access_token}`;
                     return instance(originalRequest);
                 } else {
-                    throw new Error("Refresh token retrieval failed");
+                    throw new Error("Refresh failed");
                 }
-            } catch (err) {
-                // Logout user if refresh fails
+            } catch {
                 await _removeData('ACCESS_TOKEN');
                 await _removeData('REFRESH_TOKEN');
                 await _removeData('USER_DATA');
                 router.replace('/');
-                return Promise.reject(err);
+                return Promise.reject(error);
             }
         }
 

@@ -4,7 +4,12 @@ import Colors from '../../constants/Colors'
 import { Entypo, Ionicons } from '@expo/vector-icons';
 import { responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-const Header = ({ title, icon }) => {
+interface HeaderProps {
+    title: string;
+    icon?: any;
+}
+
+const Header: React.FC<HeaderProps> = ({ title, icon }) => {
     const { StatusBarManager } = NativeModules;
 
     const height = StatusBarManager.HEIGHT;

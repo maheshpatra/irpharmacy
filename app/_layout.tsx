@@ -5,6 +5,7 @@ import { StatusBar } from "react-native";
 import useFonts from "../hooks/useFonts";
 import { useEffect, useState } from "react";
 import AppLoading from 'expo-app-loading';
+import { GlobalAlertModal } from '../components/CustomAlert';
 
 export default function Layout() {
 
@@ -13,16 +14,16 @@ export default function Layout() {
   const LoadFonts = async () => {
     await useFonts();
   };
-  useEffect(()=>{
+  useEffect(() => {
     LoadFonts()
-  },[])
+  }, [])
   // console.log("sdfsdf");
   if (!IsReady) {
     return (
       <AppLoading
         startAsync={LoadFonts}
         onFinish={() => SetIsReady(true)}
-        onError={() => {}}
+        onError={() => { }}
       />
     );
   }
@@ -31,19 +32,16 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar barStyle={'light-content'} />
       <SafeAreaProvider>
-      
         <Stack
           screenOptions={{
             headerShown: false,
-            headerStyle: {
-              backgroundColor: "#f4511e",
-            },
+            headerStyle: { backgroundColor: "#f4511e" },
             headerTintColor: "#fff",
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
+            headerTitleStyle: { fontWeight: "bold" },
           }}
         />
+        {/* Global custom alert — renders above everything */}
+        <GlobalAlertModal />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -1,4 +1,4 @@
-import { View, RefreshControl, Text, FlatList, Image, Alert, TouchableOpacity } from 'react-native'
+import { View, RefreshControl, Text, FlatList, Image, TouchableOpacity } from 'react-native'
 import React, { useCallback } from 'react'
 import Header from '../../components/Header'
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -9,58 +9,76 @@ import { useEffect, useState } from 'react';
 import axios from '../../helper';
 import { router, useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
+import { showAlert } from '../../components/CustomAlert';
 export default function Orders() {
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [orders, setOrders] = useState<any[]>([])
-  const [medichine, setMedichine] = useState([])
-
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
 
   useEffect(() => {
 
     _retrieveData("USER_DATA").then((userdata) => {
-      console.log(userdata);
       if (userdata && userdata !== 'error') {
         setData(userdata)
-
       } else {
-        Alert.alert('Error', 'user not found!')
-
+        showAlert({ type: 'error', title: 'Error', message: 'User not found!' })
       }
-
     });
   }, [])
 
-  const getOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('order/get_orders.php');
+  const getOrders = useCallback(async (pageNum = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
 
+    try {
+      const response = await axios.get(`order/get_orders.php?page=${pageNum}&limit=10`);
       const res = response.data;
       console.log('getOrders response:', res);
 
-      if (res.status === 'success') {
-        setOrders(Array.isArray(res.data) ? res.data : []);
-        // Removed incorrect setData(res.data)
-      } else {
-        // Fallback or error handling
-        setOrders([]);
-      }
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        if (res.data.length < 10) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
 
-    } catch (err) {
-      console.error('Fetch orders error:', err);
+        if (append) {
+          setOrders(prev => [...prev, ...res.data]);
+        } else {
+          setOrders(res.data);
+        }
+      } else {
+        if (!append) setOrders([]);
+        setHasMore(false);
+      }
+    } catch {
+      // silent
     } finally {
-      setLoading(false);
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      getOrders()
+      setPage(1);
+      setHasMore(true);
+      getOrders(1, false)
     }, [])
   )
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      getOrders(nextPage, true);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
@@ -126,8 +144,14 @@ export default function Orders() {
               </View>
             </TouchableOpacity>
           )}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={getOrders} colors={[Colors.primary]} />
+            <RefreshControl refreshing={loading} onRefresh={() => {
+              setPage(1);
+              setHasMore(true);
+              getOrders(1, false);
+            }} colors={[Colors.primary]} />
           }
         />
       ) : (

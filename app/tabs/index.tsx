@@ -6,13 +6,12 @@ import {
   Image,
   Platform,
   NativeModules,
-  ImageBackground,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   FlatList,
   Dimensions,
-  Linking
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } from 'react-native-responsive-dimensions';
 import { useEffect, useState } from 'react';
@@ -25,18 +24,10 @@ import { Ionicons, FontAwesome, MaterialIcons, Feather } from '@expo/vector-icon
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../../constants/Colors';
 import { _retrieveData, _storeData } from '../../local_storage';
-import { Alert } from 'react-native';
+import { showAlert } from '../../components/CustomAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-
-const DUMMY_MEDICINES = [
-  { id: 1, name: 'Paracetamol 500mg', price: '₹20.00', discount: '10% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2020/10/YW/OY/XU/49579469/paracetamol-tablets-ip-500mg-500x500.jpg', category: 'Fever' },
-  { id: 2, name: 'Vitamin C Tablets', price: '₹150.00', discount: '5% OFF', image: 'https://m.media-amazon.com/images/I/71N7vj5cSXL._AC_UF1000,1000_QL80_.jpg', category: 'Supplement' },
-  { id: 3, name: 'Cough Syrup', price: '₹85.00', discount: '15% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2022/12/YI/QW/YE/37190933/herbal-cough-syrup-500x500.jpg', category: 'Syrup' },
-  { id: 4, name: 'Pain Relief Gel', price: '₹120.00', discount: '20% OFF', image: 'https://cdn01.pharmeasy.in/dam/products_otc/I40695/volini-pain-relief-gel-tube-of-75-g-2-1671743653.jpg', category: 'Pain Relief' },
-  { id: 5, name: 'Dolo 650', price: '₹30.00', discount: '10% OFF', image: 'https://5.imimg.com/data5/SELLER/Default/2023/7/322312675/GV/OW/ZS/192666504/dolo-650-tablet-500x500.jpg', category: 'Fever' },
-];
 
 const DUMMY_CATEGORIES = [
   { id: 1, name: 'Diabetes', url: 'https://cdn-icons-png.flaticon.com/512/2821/2821901.png' },
@@ -50,25 +41,34 @@ const DUMMY_CATEGORIES = [
 const Home = () => {
   const { StatusBarManager } = NativeModules;
   const insets = useSafeAreaInsets();
-  // const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 40 : StatusBarManager.HEIGHT;
-  const { username, setUser, addToCart, cart } = useStore();
+  const { username, setUser, addToCart, cart, addresses } = useStore();
 
   const [data, setdata] = useState<any>([]);
   const [tabdata, settabdata] = useState<any[]>(DUMMY_CATEGORIES);
   const [loading, setLoading] = useState(false);
-  // const [username, setUsername] = useState('Guest'); // Managed by store
+  const [featuredMedicines, setFeaturedMedicines] = useState<any[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
 
   useEffect(() => {
     loadUser();
     fetchBanners();
     fetchTabs();
+    fetchFeaturedMedicines();
   }, []);
+
+  useEffect(() => {
+    // If no address selected, force location selection
+    const timer = setTimeout(() => {
+      if (addresses.length === 0) {
+        router.push({ pathname: '/location_selection', params: { source: 'addresses' } } as any);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [addresses]);
 
   const loadUser = async () => {
     let userData = await _retrieveData('USER_DATA');
-    if (userData) {
-      setUser(userData);
-    }
+    if (userData) setUser(userData);
     try {
       const response = await ApiService.getUser();
       if (response && response.status === 'success' && response.data) {
@@ -83,9 +83,7 @@ const Home = () => {
         setUser(freshUser);
         await _storeData('USER_DATA', freshUser);
       }
-    } catch (error) {
-      console.log("Error fetching user data", error);
-    }
+    } catch { }
   };
 
   const fetchBanners = async () => {
@@ -93,7 +91,6 @@ const Home = () => {
     try {
       const bannerData = await ApiService.getBanners('top');
       let formattedBanners = [];
-
       if (bannerData?.status === 'success' && bannerData?.data && Array.isArray(bannerData.data)) {
         formattedBanners = bannerData.data.map((item: any) => ({
           ...item,
@@ -103,13 +100,19 @@ const Home = () => {
       } else if (bannerData?.banner && Array.isArray(bannerData.banner)) {
         formattedBanners = bannerData.banner;
       }
-
       setdata({ banner: formattedBanners });
-    } catch (e) {
-      console.log("Banner Fetch Error", e);
-    } finally {
-      setLoading(false);
-    }
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  const fetchFeaturedMedicines = async () => {
+    setFeaturedLoading(true);
+    try {
+      const res = await ApiService.getFeaturedMedicines('721434', 10);
+      const raw = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setFeaturedMedicines(raw.slice(0, 10));
+    } catch { }
+    finally { setFeaturedLoading(false); }
   };
 
   const fetchTabs = async () => {
@@ -117,25 +120,17 @@ const Home = () => {
       const categoriesResponse = await ApiService.getCategories();
       if (categoriesResponse.status === 'success' && Array.isArray(categoriesResponse.data)) {
         const mappedCategories = categoriesResponse.data.map((catName: string, index: number) => {
-          let imageUrl = 'https://cdn-icons-png.flaticon.com/512/2965/2965386.png'; // Default
+          let imageUrl = 'https://cdn-icons-png.flaticon.com/512/2965/2965386.png';
           const lowerName = catName.toLowerCase();
-
           if (lowerName.includes('food')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2821/2821901.png';
           else if (lowerName.includes('medicine')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2554/2554245.png';
           else if (lowerName.includes('otc')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/2821/2821804.png';
           else if (lowerName.includes('surgical')) imageUrl = 'https://cdn-icons-png.flaticon.com/512/3004/3004458.png';
-
-          return {
-            id: index + 1,
-            name: catName,
-            url: imageUrl
-          };
+          return { id: index + 1, name: catName, url: imageUrl };
         });
         settabdata(mappedCategories);
       }
-    } catch (e) {
-      console.log('Error fetching categories, using dummy data', e);
-    }
+    } catch { }
   };
 
   const handleAddToCart = (item: any) => {
@@ -147,7 +142,13 @@ const Home = () => {
       quantity: 1,
       category: item.category
     });
-    Alert.alert("Success", "Added to cart!");
+    showAlert({
+      type: 'success', title: 'Added to Cart', message: `${item.name} added to your cart.`,
+      buttons: [
+        { text: 'Continue', style: 'cancel' },
+        { text: 'View Cart', onPress: () => router.push('/cart') },
+      ]
+    });
   };
 
   const SkeletonLoader = () => (
@@ -168,7 +169,9 @@ const Home = () => {
           <View style={{ marginLeft: 10 }}>
             <Text style={styles.locationLabel}>Delivering to</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.locationValue} numberOfLines={1}>Select Location</Text>
+              <Text style={styles.locationValue} numberOfLines={1}>
+                {addresses.length > 0 ? addresses[addresses.length - 1].details : 'Select Location'}
+              </Text>
               <Ionicons name="chevron-down" size={14} color="#333" style={{ marginLeft: 2 }} />
             </View>
           </View>
@@ -360,22 +363,34 @@ const Home = () => {
           </ScrollView>
         </View>
 
-        {/* Featured Medicines (Dummy Data) */}
+        {/* Featured Medicines — Live API */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured Medicines</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push({ pathname: 'search', params: { query: 'tablet' } } as any)}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            data={DUMMY_MEDICINES}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 15, paddingRight: 5 }}
-            renderItem={renderMedicineItem}
-            keyExtractor={(item) => item.id.toString()}
-          />
+          {featuredLoading ? (
+            <View style={{ paddingLeft: 15, flexDirection: 'row' }}>
+              {[1, 2].map(i => (
+                <SkeletonPlaceholder key={i} backgroundColor='#e1e9ee' highlightColor='#f2f8fc'>
+                  <SkeletonPlaceholder.Item width={responsiveScreenWidth(42)} height={200} borderRadius={18} marginRight={15} />
+                </SkeletonPlaceholder>
+              ))}
+            </View>
+          ) : featuredMedicines.length > 0 ? (
+            <FlatList
+              data={featuredMedicines}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 15, paddingRight: 5 }}
+              renderItem={renderMedicineItem}
+              keyExtractor={(item) => item.id.toString()}
+            />
+          ) : (
+            <Text style={{ paddingHorizontal: 20, color: '#aaa', fontFamily: 'novaregular' }}>No featured items available</Text>
+          )}
         </View>
 
         {/* Brand Images (Existing) */}

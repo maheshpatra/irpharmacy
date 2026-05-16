@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar } from 'react-native';
-import { responsiveFontSize, responsiveScreenHeight } from 'react-native-responsive-dimensions';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar } from 'react-native';
+import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import HeaderAB from '../components/HeaderAB';
 import { useStore } from '../store/useStore';
 import Colors from '../constants/Colors';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { showAlert } from '../components/CustomAlert';
+
 
 export default function Addresses() {
     const { addresses, removeAddress } = useStore();
@@ -15,14 +17,15 @@ export default function Addresses() {
     };
 
     const handleDelete = (id: string) => {
-        Alert.alert(
-            "Delete Address",
-            "Are you sure you want to delete this address?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: 'destructive', onPress: () => removeAddress(id) }
+        showAlert({
+            type: 'confirm',
+            title: 'Delete Address',
+            message: 'Are you sure you want to delete this address?',
+            buttons: [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => removeAddress(id) }
             ]
-        );
+        });
     };
 
     const renderItem = ({ item }: { item: any }) => (

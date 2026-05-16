@@ -5,7 +5,10 @@ import {
     StyleSheet,
     FlatList,
     TextInput,
-import { TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+    TouchableOpacity,
+    StatusBar,
+    ActivityIndicator
+} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -13,8 +16,10 @@ import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import Colors from '../constants/Colors';
 import { ApiService } from '../services/api';
 import { useStore } from '../store/useStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Search = () => {
+    const insets = useSafeAreaInsets();
     const params = useLocalSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [products, setProducts] = useState<any[]>([]);
@@ -91,21 +96,32 @@ const Search = () => {
                 }
             }
 
-            // Normalizing data fields if necessary
-            const normalizedData = newData.map(item => ({
-                ...item,
-                // Ensure common fields exist
-                manufacturer: item.company_name || item.companyname || item.mfr || '',
-                description: item.desc || item.description || '',
-                // Ensure numeric price for sorting
-                priceVal: parseFloat((item.price || '0').toString().replace(/[^0-9.]/g, ''))
-            }));
+            // Normalise + filter:
+            //   - skip items that are out of stock / unavailable
+            //   - skip items with price = 0 or null
+            const normalizedData = newData
+                .map(item => ({
+                    ...item,
+                    manufacturer: item.company_name || item.companyname || item.mfr || '',
+                    description: item.desc || item.description || '',
+                    priceVal: parseFloat((item.price || '0').toString().replace(/[^0-9.]/g, ''))
+                }))
+                .filter(item => {
+                    // Remove zero / missing price
+                    if (!item.price || item.priceVal <= 0) return false;
+                    // Remove out-of-stock items
+                    const avail = item.aviqty ?? item.available_qty ?? item.availableQty;
+                    if (avail !== undefined && avail !== null && Number(avail) === 0) return false;
+                    // Filter by status string
+                    const s = (item.status || '').toLowerCase();
+                    if (s === 'out of stock' || s === 'out_of_stock' || s === 'unavailable') return false;
+                    return true;
+                });
 
             if (reset) {
                 setProducts(normalizedData);
             } else {
                 setProducts(prev => {
-                    // Avoid duplicates if API returns overlapping data
                     const existingIds = new Set(prev.map(p => p.id));
                     const uniqueNew = normalizedData.filter(p => !existingIds.has(p.id));
                     return [...prev, ...uniqueNew];
@@ -151,7 +167,7 @@ const Search = () => {
         <TouchableOpacity
             style={styles.itemContainer}
             activeOpacity={0.8}
-            onPress={() => router.push({ pathname: 'product_details', params: item })}
+            onPress={() => router.push({ pathname: '/product_details', params: item })}
         >
             <FastImage
                 source={item.image ? { uri: item.image } : require('../assets/images/med.jpg')}
@@ -177,7 +193,21 @@ const Search = () => {
             </View>
             <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => addToCart({ id: item.id.toString(), name: item.name, price: item.price?.toString() || '0', image: item.image || '', quantity: 1, category: item.category })}
+                onPress={async () => {
+                    try {
+                        await addToCart({
+                            id: item.id.toString(),
+                            name: item.name,
+                            price: item.price?.toString() || '0',
+                            image: item.image || '',
+                            quantity: 1,
+                            category: item.category
+                        });
+                        router.push('/cart');
+                    } catch {
+                        // Error Alert already shown by the store
+                    }
+                }}
             >
                 <Ionicons name="add" size={20} color={Colors.primary} />
             </TouchableOpacity>
@@ -189,7 +219,7 @@ const Search = () => {
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header with Search */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) }]}>
                 <TouchableOpacity onPress={() => router.back()} style={{ paddingRight: 10 }}>
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
@@ -247,7 +277,7 @@ const Search = () => {
             ) : (
                 <FlatList
                     data={sortedProducts}
-                    keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                    keyExtractor={(item, index) => `${item.id}_${index}`}
                     renderItem={renderItem}
                     contentContainerStyle={{ padding: 15, paddingBottom: 50 }}
                     onEndReached={handleLoadMore}
@@ -291,7 +321,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 15,
-        paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
         backgroundColor: '#fff',

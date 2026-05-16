@@ -124,14 +124,14 @@ export default function OrderDetails() {
                                    <Text style={styles.sectionTitle}>Patient Details</Text>
                                    <View style={styles.patientContainer}>
                                         <Image
-                                             source={patient.gender === 'Female' ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')}
+                                             source={(patient.gender === 'Female' || patient.pgender === 'Female') ? require('../assets/images/female.jpg') : require('../assets/images/male.jpg')}
                                              style={styles.avatar}
                                         />
                                         <View style={styles.patientInfo}>
-                                             <Text style={styles.patientName}>{patient.name || 'Unknown'}</Text>
+                                             <Text style={styles.patientName}>{patient.name || patient.p_name || patient.pname || 'Unknown'}</Text>
                                              <Text style={styles.patientDetails}>
-                                                  {patient.gender || ''}
-                                                  {patient.age ? ` • ${patient.age} Years` : ''}
+                                                  {patient.gender || patient.pgender || ''}
+                                                  {(patient.age || patient.page) ? ` • ${patient.age || patient.page} Years` : ''}
                                              </Text>
                                              {patientAddress && (
                                                   <Text style={styles.addressText} numberOfLines={2}>{patientAddress}</Text>

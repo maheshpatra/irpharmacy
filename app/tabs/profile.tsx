@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Image, Text, Alert, TouchableOpacity, ScrollView, StyleSheet, StatusBar, ToastAndroid } from 'react-native';
+import { View, Image, Text, TouchableOpacity, ScrollView, StyleSheet, StatusBar, ToastAndroid } from 'react-native';
 import { responsiveFontSize, responsiveScreenHeight } from 'react-native-responsive-dimensions';
 import { _retrieveData, _removeData, _storeData } from "../../local_storage";
 import { router } from 'expo-router';
@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { ApiService } from '../../services/api';
 import { path } from '../../components/server';
+import { showAlert } from '../../components/CustomAlert';
 
 export default function Profile() {
   const [data, setData] = useState<any>(null);
@@ -85,13 +86,14 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
+    showAlert({
+      type: 'confirm',
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Logout",
+          text: 'Logout',
           style: 'destructive',
           onPress: async () => {
             await _removeData('USER_DATA');
@@ -101,7 +103,7 @@ export default function Profile() {
           }
         }
       ]
-    );
+    });
   };
 
   const MenuSection = ({ title, items }: { title: string, items: any[] }) => (

@@ -12,26 +12,45 @@
       "resizeMode": "contain",
       "backgroundColor": "#fff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCmUrU5yuOBzybzwCxhRtqcvVgruuCrvbA"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate delivery addresses.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to provide accurate delivery addresses."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#fff"
       },
-      "package": "com.irpharmacy"
+      "package": "com.irpharmacy",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCmUrU5yuOBzybzwCxhRtqcvVgruuCrvbA"
+        }
+      }
     },
     "plugins": [
       "expo-router",
+      "expo-location",
       [
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ]
-
     ],
     "experiments": {
       "typedRoutes": true

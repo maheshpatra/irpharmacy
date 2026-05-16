@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   StatusBar,
   KeyboardAvoidingView,
@@ -23,6 +22,7 @@ import { _storeData } from "../local_storage";
 import axios from '../helper';
 import { responsiveFontSize, responsiveScreenHeight, responsiveScreenWidth } from "react-native-responsive-dimensions";
 import { LinearGradient } from 'expo-linear-gradient';
+import { showAlert } from '../components/CustomAlert';
 
 const Signup = () => {
   const ts = Dimensions.get('screen').width / 100
@@ -39,10 +39,10 @@ const Signup = () => {
 
   const signup = async () => {
     if (!data.name.trim()) {
-      Alert.alert('Signup Error', 'Please Enter Name.');
+      showAlert({ type: 'warning', title: 'Signup Error', message: 'Please enter your name.' });
       return;
     } else if (!data.email.trim()) {
-      Alert.alert('Signup Error', 'Please Enter Email.');
+      showAlert({ type: 'warning', title: 'Signup Error', message: 'Please enter your email address.' });
       return;
     }
 
@@ -67,36 +67,29 @@ const Signup = () => {
           "Content-Type": "multipart/form-data",
         }
       });
-      console.log(res);
-
       if (res.error) {
         setLoading(false);
-        Alert.alert('Signup Error', res.message);
+        showAlert({ type: 'error', title: 'Signup Error', message: res.message });
       } else if (res.code == "REGISTERED" || res.status === 'success') {
-        // Handle successful registration
-        const userPayload = res.data || res.user; // Adapt based on actual response
+        const userPayload = res.data || res.user;
         var datab = {
           username: userPayload.name || data.name,
           email: userPayload.email || data.email,
           userid: userPayload.id,
           mobile: userPayload.mobile || mobile
         };
-
         await _storeData("USER_DATA", datab);
         if (res.access_token) await _storeData('ACCESS_TOKEN', res.access_token);
         if (res.refresh_token) await _storeData('REFRESH_TOKEN', res.refresh_token);
-
         setLoading(false);
         router.replace('/tabs');
       } else {
         setLoading(false);
-        Alert.alert('Signup Error', res.message || 'Unknown error');
+        showAlert({ type: 'error', title: 'Signup Error', message: res.message || 'Unknown error' });
       }
-
     } catch (err) {
       setLoading(false);
-      console.log(JSON.stringify(err, null, 2));
-      Alert.alert('Error', 'Something went wrong during registration.');
+      showAlert({ type: 'error', title: 'Error', message: 'Something went wrong during registration.' });
     }
   };
 

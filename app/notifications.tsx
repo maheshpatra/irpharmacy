@@ -4,6 +4,8 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons'; // FontAwesome5 for
 import { router } from 'expo-router';
 import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import Colors from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const NOTIFICATIONS = [
     {
@@ -41,6 +43,8 @@ const NOTIFICATIONS = [
 ];
 
 const Notifications = () => {
+    const insets = useSafeAreaInsets();
+
 
     const getIconColor = (type: string) => {
         switch (type) {
@@ -80,7 +84,7 @@ const Notifications = () => {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 15) }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
@@ -113,7 +117,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
         paddingBottom: 15,
         backgroundColor: '#fff',
         elevation: 2,
